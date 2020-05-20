@@ -1,6 +1,7 @@
 # Copyright (c) Open Enclave SDK contributors.
 # Licensed under the MIT License.
 
+check_submodule_not_empty("${PROJECT_SOURCE_DIR}/3rdparty/snmalloc/snmalloc")
 add_enclave_library(oesnmalloc OBJECT allocator.cpp)
 
 if (OE_TRUSTZONE)
