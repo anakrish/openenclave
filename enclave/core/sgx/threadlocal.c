@@ -332,6 +332,24 @@ oe_result_t oe_thread_local_init(oe_sgx_td_t* td)
             _thread_locals_relocated = true;
         }
 
+        {
+            // Currently this is the most appropriate spot to initialize the
+            // allocator. td_init is called quite early, even before the enclave
+            // has been initialized. Calling oe_allocator_init in
+            // _handle_init_enclave is late, since that gets called after this.
+            static bool _allocator_initialized = false;
+            bool initialized = _allocator_initialized;
+            OE_ATOMIC_MEMORY_BARRIER_ACQUIRE();
+            if (!initialized)
+            {
+                /* Initialize the allocator */
+                oe_allocator_init(
+                    (void*)__oe_get_heap_base(), (void*)__oe_get_heap_end());
+                OE_ATOMIC_MEMORY_BARRIER_RELEASE();
+                _allocator_initialized = true;
+            }
+        }
+
         // Must occur after thread local storage initialization
         oe_allocator_thread_init();
     }
