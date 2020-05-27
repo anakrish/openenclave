@@ -20,6 +20,7 @@ void* ThreadAllocUntyped::get()
 } // namespace snmalloc
 
 #define OPEN_ENCLAVE
+#define SNMALLOC_SGX
 #define USE_RESERVE_MULTIPLE 1
 #define IS_ADDRESS_SPACE_CONSTRAINED
 #define SNMALLOC_EXTERNAL_THREAD_ALLOC
@@ -27,6 +28,7 @@ void* ThreadAllocUntyped::get()
 
 // Enable the Open Enclave PAL(Platform Abstraction Layer) for Open Enclave,
 // see pal_open_enclave.h for details
+#include "./snmalloc/src/ds/address.h"
 #include "./snmalloc/src/override/malloc.cc"
 
 static void* _heap_start;

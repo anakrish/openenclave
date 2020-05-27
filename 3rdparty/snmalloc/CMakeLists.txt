@@ -20,6 +20,7 @@ enclave_compile_options(
   -Wno-conversion
   -ftls-model=local-exec
   -nostdinc++
+  -nostdinc
   -fPIE
   -ffreestanding
   ${TEE_C_FLAGS}
