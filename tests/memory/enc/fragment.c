@@ -29,7 +29,16 @@ struct mallinfo
     size_t keepcost; /* releasable (via malloc_trim) space */
 };
 
-struct mallinfo dlmallinfo(void);
+static bool _dlmalloc_available = true;
+
+// Default implementation of dlmallinfo indicates that dlmalloc is not
+// available.
+__attribute__((weak)) struct mallinfo dlmallinfo(void)
+{
+    struct mallinfo mi = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    _dlmalloc_available = false;
+    return mi;
+}
 
 static size_t _get_heap_size()
 {
@@ -97,6 +106,12 @@ void test_malloc_fixed_size_fragment(void)
 {
     // get heap size before tests
     size_t heap_size_before_test = _get_heap_size();
+    if (!_dlmalloc_available)
+    {
+        oe_host_printf("dlmalloc is not available. Skipping test");
+        return;
+    }
+
     oe_host_printf(
         "[test_malloc_fixed_size_fragment]heap size before test : %zu.\n",
         heap_size_before_test);
@@ -115,6 +130,11 @@ void test_malloc_random_size_fragment(unsigned int seed)
 {
     // get heap size before tests
     size_t heap_size_before_test = _get_heap_size();
+    if (!_dlmalloc_available)
+    {
+        oe_host_printf("dlmalloc is not available. Skipping test");
+        return;
+    }
     oe_host_printf(
         "[test_malloc_random_size_fragment]heap size before test : %zu.\n",
         heap_size_before_test);
