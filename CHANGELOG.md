@@ -17,9 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Mark APIs in include/openenclave/attestation/sgx/attester.h and verifier.h as experimental.
 - Remove CRL_ISSUER_CHAIN_PCK_PROC_CA field from endorsement struct define in include/openenclave/bits/attestation.h.
+- Switch to oeedger8r written in C++.
 
 ### Removed
 - Removed oehostapp and the appendent "-rdynamic" compiling option. Please use oehost instead and add the option back manually if necessary.
+- Removed dependency on nodejs and esy. Previously used to build Ocaml compiler and oeedger8r.
 
 [0.9.0][v0.9.0_log]
 ------------
