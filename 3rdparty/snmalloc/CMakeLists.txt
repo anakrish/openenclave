@@ -6,7 +6,7 @@ add_enclave_library(oesnmalloc OBJECT allocator.cpp)
 # Add explicit dependency to musl_includes and libcxx includes.
 # Specifying a dependency on oelibc_includes does not seem to work reliably
 # on all platforms.
-add_dependencies(oesnmalloc libcxx_includes musl_includes)
+add_dependencies(oesnmalloc libcxx_includes oelibc_includes musl_includes)
 
 if (OE_TRUSTZONE)
   enclave_link_libraries(oesnmalloc PUBLIC oelibutee_includes)
