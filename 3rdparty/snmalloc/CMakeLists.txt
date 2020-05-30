@@ -3,11 +3,10 @@
 
 check_submodule_not_empty("${PROJECT_SOURCE_DIR}/3rdparty/snmalloc/snmalloc")
 add_enclave_library(oesnmalloc OBJECT allocator.cpp)
-# Add explicit dependency to musl_includes since oelibc_includes is an
-# INTERFACE target and its dependencies (musl_includes) may not necessarily
-# be built first.
+# Add explicit dependency to musl_includes and libcxx includes.
+# Specifying a dependency on oelibc_includes does not seem to work reliably
+# on all platforms.
 add_dependencies(oesnmalloc libcxx_includes musl_includes)
-target_link_libraries(oesnmalloc oelibc_includes)
 
 if (OE_TRUSTZONE)
   enclave_link_libraries(oesnmalloc PUBLIC oelibutee_includes)
@@ -21,9 +20,7 @@ enclave_compile_options(
   PRIVATE
   -I${CMAKE_CURRENT_SOURCE_DIR}/snmalloc/src
   -I${PROJECT_SOURCE_DIR}/include
-  # For Windows builds, likely due to cmake/ninja bug, the following two
-  # include directories must be explicitly specified even though they
-  # are supposed to be brought in via oelibc_includes dependency.
+  # Explicitly specify include folders in correct order.
   -I${LIBCXX_INCLUDES}
   -I${PROJECT_BINARY_DIR}/output/include/openenclave/libc
   -Wno-conversion
