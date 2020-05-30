@@ -10,6 +10,7 @@ add_custom_command(
           ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(snmalloc_test_lib $<TARGET_OBJECTS:oesnmalloc>)
+target_link_libraries(snmalloc_test_lib oecore)
 
 add_enclave(
   TARGET
