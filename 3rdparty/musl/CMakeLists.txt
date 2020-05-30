@@ -86,6 +86,7 @@ ExternalProject_Add(
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/deprecations.h
           ${MUSL_INCLUDES}/bits/deprecations.h
   BUILD_BYPRODUCTS ${MUSL_INCLUDES}/bits/deprecations.h
+  STEP_TARGETS build
   INSTALL_COMMAND "")
 
 set_property(DIRECTORY PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${MUSL_INCLUDES}
