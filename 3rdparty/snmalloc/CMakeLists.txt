@@ -4,16 +4,17 @@
 check_submodule_not_empty("${PROJECT_SOURCE_DIR}/3rdparty/snmalloc/snmalloc")
 
 add_custom_command(
-  OUTPUT
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/deprecations.h
+         ${CMAKE_CURRENT_BINARY_DIR}/__config.h
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
     ${PROJECT_BINARY_DIR}/output/include/openenclave/libc/bits/deprecations.h
-    ${LIBCXX_INCLUDES}/__config
-  COMMAND ""
+    ${CMAKE_CURRENT_BINARY_DIR}/deprecations.h
+  COMMAND ${CMAKE_COMMAND} -E copy ${LIBCXX_INCLUDES}/__config
+          ${CMAKE_CURRENT_BINARY_DIR}/__config.h
   DEPENDS musl_includes libcxx_includes)
 
-add_enclave_library(
-  oesnmalloc OBJECT allocator.cpp
-  ${PROJECT_BINARY_DIR}/output/include/openenclave/libc/bits/deprecations.h
-  ${LIBCXX_INCLUDES}/__config)
+add_enclave_library(oesnmalloc OBJECT allocator.cpp deprecations.h __config.h)
 
 if (OE_TRUSTZONE)
   enclave_link_libraries(oesnmalloc PUBLIC oelibutee_includes)
