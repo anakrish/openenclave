@@ -2,13 +2,18 @@
 # Licensed under the MIT License.
 
 check_submodule_not_empty("${PROJECT_SOURCE_DIR}/3rdparty/snmalloc/snmalloc")
+
+add_custom_command(
+  OUTPUT
+    ${PROJECT_BINARY_DIR}/output/include/openenclave/libc/bits/deprecations.h
+    ${LIBCXX_INCLUDES}/__config
+  COMMAND ""
+  DEPENDS musl_includes libcxx_includes)
+
 add_enclave_library(
   oesnmalloc OBJECT allocator.cpp
-  ${PROJECT_BINARY_DIR}/output/include/openenclave/libc/bits/deprecations.h)
-# Add explicit dependency to musl_includes and libcxx includes.
-# Specifying a dependency on oelibc_includes does not seem to work reliably
-# on all platforms.
-add_dependencies(oesnmalloc libcxx_includes musl_includes-build)
+  ${PROJECT_BINARY_DIR}/output/include/openenclave/libc/bits/deprecations.h
+  ${LIBCXX_INCLUDES}/__config)
 
 if (OE_TRUSTZONE)
   enclave_link_libraries(oesnmalloc PUBLIC oelibutee_includes)
