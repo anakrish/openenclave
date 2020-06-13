@@ -1,0 +1,22 @@
+// Copyright (c) Open Enclave SDK contributors.
+// Licensed under the MIT License.
+
+enclave {
+    from "openenclave/edl/logging.edl" import *;
+    from "openenclave/edl/syscall.edl" import *;
+    from "platform.edl" import *;
+
+    enum num_tcs_t {
+         NUM_TCS = 5
+    };
+
+    trusted {
+        public oe_result_t enc_check_ocall_terminate();
+        public void enc_wait_in_host();
+    };
+
+    untrusted {
+        oe_result_t host_terminate();
+        void host_wait();
+    };
+};

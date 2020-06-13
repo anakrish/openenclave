@@ -148,6 +148,11 @@ typedef enum _oe_result
     OE_ENCLAVE_ABORTED,
 
     /**
+     * The operation cannot be completed because the enclave is terminating.
+     */
+    OE_ENCLAVE_TERMINATING,
+
+    /**
      * The underlying platform or hardware returned an error. For example,
      * an SGX user-mode instruction failed.
      */

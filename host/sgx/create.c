@@ -1044,6 +1044,29 @@ oe_result_t oe_terminate_enclave(oe_enclave_t* enclave)
     if (!enclave || enclave->magic != ENCLAVE_MAGIC)
         OE_RAISE(OE_INVALID_PARAMETER);
 
+    // Check if we are in an ocall. If that is the case, the binding for the
+    // current thread will point to this enclave
+    oe_thread_binding_t* binding = oe_get_thread_binding();
+    if (binding && binding->enclave == enclave)
+        OE_RAISE(OE_REENTRANT_ECALL);
+
+    oe_mutex_lock(&enclave->lock);
+    if (enclave->is_terminating)
+    {
+        /* Another thread has already called oe_terminate_enclave */
+        oe_mutex_unlock(&enclave->lock);
+        OE_RAISE(OE_ENCLAVE_TERMINATING);
+    }
+
+    /* Note the id of this thread. Only ecalls from this thread will be allowed
+     */
+    enclave->terminating_thread = oe_thread_self();
+
+    /* Mark this enclave as terminating to prevent furthur ecalls. */
+    OE_ATOMIC_MEMORY_BARRIER_RELEASE();
+    enclave->is_terminating = true;
+    oe_mutex_unlock(&enclave->lock);
+
     /* Shut down the switchless manager */
     OE_CHECK(oe_stop_switchless_manager(enclave));
 
@@ -1099,6 +1122,7 @@ oe_result_t oe_terminate_enclave(oe_enclave_t* enclave)
     free(enclave);
 
 done:
+
     return result;
 }
 #endif // OEHOSTMR

@@ -534,6 +534,9 @@ static void* _assign_tcs(oe_enclave_t* enclave)
             }
         }
     }
+    if (tcs)
+        ++enclave->num_bound_tcs;
+
     oe_mutex_unlock(&enclave->lock);
 
     return tcs;
@@ -581,6 +584,7 @@ static void _release_tcs(oe_enclave_t* enclave, void* tcs)
             }
         }
     }
+    --enclave->num_bound_tcs;
     oe_mutex_unlock(&enclave->lock);
 }
 
@@ -614,6 +618,30 @@ oe_result_t oe_ecall(
     /* Assign a oe_sgx_td_t for this operation */
     if (!(tcs = _assign_tcs(enclave)))
         OE_RAISE(OE_OUT_OF_THREADS);
+
+    OE_ATOMIC_MEMORY_BARRIER_ACQUIRE();
+    if (enclave->is_terminating)
+    {
+        if (func == OE_ECALL_DESTRUCTOR)
+        {
+            if (oe_thread_self() == enclave->terminating_thread)
+            {
+                // The ecalls that actually does the terminate is allowed.
+                // Wait for any executing ecalls to finish.
+                while (enclave->num_bound_tcs > 1)
+                    oe_host_sleep(1);
+            }
+            else
+                OE_RAISE(OE_ENCLAVE_TERMINATING);
+        }
+        else
+        {
+            // New ecalls are disallowed when the enclave is terminating.
+            OE_RAISE(OE_ENCLAVE_TERMINATING);
+        }
+    }
+    // oe_terminate_enclave may be called after the above check.
+    // In that case, terminate will wait for this ecall to complete.
 
     oe_log(
         OE_LOG_LEVEL_VERBOSE,

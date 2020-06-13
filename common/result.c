@@ -58,6 +58,8 @@ const char* oe_result_str(oe_result_t result)
             return "OE_ENCLAVE_ABORTING";
         case OE_ENCLAVE_ABORTED:
             return "OE_ENCLAVE_ABORTED";
+        case OE_ENCLAVE_TERMINATING:
+            return "OE_ENCLAVE_TERMINATING";
         case OE_PLATFORM_ERROR:
             return "OE_PLATFORM_ERROR";
         case OE_INVALID_CPUSVN:
@@ -168,6 +170,7 @@ bool oe_is_valid_result(uint32_t result)
         case OE_SERVICE_UNAVAILABLE:
         case OE_ENCLAVE_ABORTING:
         case OE_ENCLAVE_ABORTED:
+        case OE_ENCLAVE_TERMINATING:
         case OE_PLATFORM_ERROR:
         case OE_INVALID_CPUSVN:
         case OE_INVALID_ISVSVN:

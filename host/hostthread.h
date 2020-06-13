@@ -230,6 +230,13 @@ int oe_thread_setspecific(oe_thread_key key, void* value);
  */
 void* oe_thread_getspecific(oe_thread_key key);
 
+/**
+ * Sleep the current thread for the specified milliseconds.
+ *
+ * @param milliseconds Number of milliseconds to sleep.
+ */
+void oe_host_sleep(uint32_t milliseconds);
+
 OE_EXTERNC_END
 
 #endif /* _HOSTTHREAD_H */

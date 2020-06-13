@@ -69,7 +69,8 @@ typedef struct _thread_binding
     EnclaveEvent event;
 
     /* This field allows the simulation mode exception handler to read enclave
-     * properties of the current thread binding */
+     * properties of the current thread binding. It is also used to disallow
+     * calling oe_terminate_enclave from within an ocall. */
     struct _oe_enclave* enclave;
 
     /* Buffer used for ocall parameters */
@@ -130,6 +131,15 @@ typedef struct _oe_enclave
 
     /* Manager for switchless calls */
     oe_switchless_call_manager_t* switchless_manager;
+
+    /* is the enclave terminating */
+    bool is_terminating;
+
+    /* Id of the thread that scheduled the terminate. */
+    oe_thread_t terminating_thread;
+
+    /* Number of bound tcs. Bound tcs indicates */
+    uint32_t num_bound_tcs;
 } oe_enclave_t;
 
 /* Get the event for the given TCS */

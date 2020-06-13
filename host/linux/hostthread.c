@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <openenclave/host.h>
 #include <pthread.h>
+#include <unistd.h>
 
 /*
 **==============================================================================
@@ -109,4 +110,9 @@ int oe_thread_setspecific(oe_thread_key key, void* value)
 void* oe_thread_getspecific(oe_thread_key key)
 {
     return pthread_getspecific(key);
+}
+
+void oe_host_sleep(uint32_t milliseconds)
+{
+    usleep(milliseconds * 1000);
 }
