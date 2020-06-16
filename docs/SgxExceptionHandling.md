@@ -12,6 +12,24 @@ The whitepaper [Exception Handling in Intel® Software Guard Extensions (Intel®
 (https://software.intel.com/content/www/us/en/develop/download/exception-handling-in-intel-software-guard-extensions-applications.html?wapkw=SGX%20exception)
 provides an overview of how HW exceptions are handled in Intel(R) Software Guard Extensions (SGX) Enclaves.
 
+# List of SGX hardware exceptions
+
+The following table lists the kinds of exceptions that are reported to the enclave upon encountering,
+and therefore can be handled by registering a vectored exception handler within the enclave.
+
+Name  |Vector # |Description
+------|---------|----------------
+#DE   | 0       | Divider exception.
+#DB   | 1       | Debug exception.
+#BP   | 3       | Breakpoint exception.
+#BR   | 5       | Bound range exceeded exception.
+#UD   | 6       | Invalid opcode execution.
+#GP   | 13      | General protection exception. Only reported if SECS.MISCSELECT.EXINFO = 1.
+#PF   | 14      | Page protection exception. Only reported if SECS.MISCSELECT.EXINFO = 1.
+#MF   | 16      | X87 FPU floating-point error.
+#AC   | 17      | Alignment check exceptions.
+#XM   | 19      | SIMD floating-point exceptions
+
 # Asynchronous Exit Pointer (AEP)
 
 When a hardware exception occurs within the enclave, the processor exits the enclave and jumps to
@@ -51,3 +69,42 @@ To prevent leaking of enclave confidential information, all the registers are cl
 - `RIP` points to the AEP function. This makes it look to the operating system as if the hardware exception occurred in the AEP function.
 - `RAX` has the value '3' which corresponds to `ERESUME` leaf of the `ENCLU` instruction.
 - `RBX` points to the Thread Control State (`TCS`) of the enclave thread that encountered the exception.
+
+The AEP function does not conform to any AEP and must start with the `ENCLU`
+instruction (see the **AEP and ptrace** section below for why this must be the case).
+That is, if the execution were to be resumed, the control would execute the `ENCLU`
+instruction with the `ERESUME` leaf, effectively resuming execution within the enclave
+at the point where the exception happened.
+
+```asm
+OE_AEP:
+.cfi_startproc
+
+// N.B, the AEP must be a ERESUME(ENCLU[3]) directly, otherwise single step
+// debugging can't work. When an AEX happens, the rax in processor synthentic
+// state will be set to 3, and the rbx will be set to TCS of interrupted
+// enclave thread automatically. Host side doesn't need to and shouldn't do
+// additional settings.
+
+.aep:
+
+    ENCLU
+    ud2
+
+.cfi_endproc
+```
+
+## AEP and ptrace
+
+As described above, whenever a hardware exception happens,
+
+## AEP and Debuggers
+
+## AEP and PLT/Incremental Linking
+
+
+# Two Phase exception handling
+
+## FS/GS Registers
+
+## Exception safety
