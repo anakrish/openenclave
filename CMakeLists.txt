@@ -385,6 +385,8 @@ if (UNIX)
   add_subdirectory(pkgconfig)
 endif ()
 
+add_subdirectory(logging)
+
 if (WIN32)
   install(FILES ./scripts/clangw ./scripts/llvm-arw
           DESTINATION ${CMAKE_INSTALL_BINDIR}/scripts/)

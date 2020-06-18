@@ -15,4 +15,4 @@ add_enclave(TARGET oecertdump_enc SOURCES enc.cpp
 # Need for the generated file oecertdump_t.h
 enclave_include_directories(oecertdump_enc PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-enclave_link_libraries(oecertdump_enc oeenclave oelibc)
+enclave_link_libraries(oecertdump_enc oeenclave oelogging_enc oelibc)

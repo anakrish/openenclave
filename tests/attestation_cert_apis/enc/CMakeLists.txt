@@ -20,4 +20,4 @@ add_enclave(
   ${CMAKE_CURRENT_BINARY_DIR}/tls_t.c)
 
 enclave_include_directories(tls_enc PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-enclave_link_libraries(tls_enc oeenclave oelibc)
+enclave_link_libraries(tls_enc oeenclave oelibc oelogging_enc)

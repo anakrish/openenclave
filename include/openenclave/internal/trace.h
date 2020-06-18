@@ -27,20 +27,33 @@ extern oe_log_level_t _log_level;
 #define OE_LOG_MESSAGE_LEN_MAX 2048U
 #define OE_MAX_FILENAME_LEN 256U
 
-#if !defined(OE_BUILD_ENCLAVE)
+#if defined(OE_BUILD_ENCLAVE)
+
+extern bool oe_is_logging_available;
+
+#define OE_TRACE(level, ...)            \
+    do                                  \
+    {                                   \
+        if (oe_is_logging_available)    \
+            oe_log(level, __VA_ARGS__); \
+    } while (0)
+
+#else
+
 oe_result_t oe_log_enclave_init(oe_enclave_t* enclave);
 void oe_log_message(bool is_enclave, oe_log_level_t level, const char* message);
-#endif
-
-oe_result_t oe_log(oe_log_level_t level, const char* fmt, ...);
-oe_log_level_t oe_get_current_logging_level(void);
-void initialize_log_config(void);
 
 #define OE_TRACE(level, ...)        \
     do                              \
     {                               \
         oe_log(level, __VA_ARGS__); \
     } while (0)
+
+#endif
+
+oe_result_t oe_log(oe_log_level_t level, const char* fmt, ...);
+oe_log_level_t oe_get_current_logging_level(void);
+void initialize_log_config(void);
 
 #define OE_TRACE_FATAL(fmt, ...) \
     OE_TRACE(                    \
