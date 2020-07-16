@@ -298,6 +298,17 @@ static void _dump(bool need_lock)
         oe_spin_unlock(&_spin);
 }
 
+/**
+ * By default debug malloc will set allocated and freed memory to 0xAA.
+ * This function can be redefined by test enclaves as empty to avoid
+ * performance issues.
+ */
+OE_WEAK
+void oe_debug_malloc_clear_memory(void* p, size_t size)
+{
+    oe_memset_s(p, size, 0xAA, size);
+}
+
 /*
 **==============================================================================
 **
@@ -315,7 +326,7 @@ void* oe_debug_malloc(size_t size)
         return NULL;
 
     /* Fill block with 0xAA (Allocated) bytes */
-    oe_memset_s(block, block_size, 0xAA, block_size);
+    oe_debug_malloc_clear_memory(block, block_size);
 
     header_t* header = (header_t*)block;
     INIT_BLOCK(header, 0, size);
@@ -336,7 +347,7 @@ void oe_debug_free(void* ptr)
         /* Fill the whole block with 0xDD (Deallocated) bytes */
         void* block = _get_block_address(ptr);
         size_t block_size = _get_block_size(ptr);
-        oe_memset_s(block, block_size, 0xDD, block_size);
+        oe_debug_malloc_clear_memory(block, block_size);
 
         oe_allocator_free(block);
     }
