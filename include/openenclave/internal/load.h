@@ -96,6 +96,8 @@ struct _oe_enclave_image
         oe_enclave_pe_image_t pe;
     } u;
 
+    struct _oe_enclave_image* secondary_image;
+
     oe_result_t (
         *calculate_size)(const oe_enclave_image_t* image, size_t* image_size);
 

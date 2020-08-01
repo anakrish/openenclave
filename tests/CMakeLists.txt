@@ -103,6 +103,7 @@ if (UNIX
     add_subdirectory(props)
     add_subdirectory(qeidentity)
     add_subdirectory(report)
+    add_subdirectory(scmml)
     add_subdirectory(SampleApp)
     add_subdirectory(SampleAppCRT)
     add_subdirectory(sealKey)

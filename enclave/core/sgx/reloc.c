@@ -42,6 +42,14 @@ bool oe_apply_relocations(void)
         {
             *dest = (uint64_t)(baseaddr + p->r_addend);
         }
+        else if (reloc_type == R_X86_64_GLOB_DAT)
+        {
+            int64_t addend = p->r_addend;
+            if (addend)
+            {
+                *dest = (uint64_t)(baseaddr + p->r_addend);
+            }
+        }
     }
 
     return true;
