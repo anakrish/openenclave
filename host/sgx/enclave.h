@@ -130,6 +130,10 @@ typedef struct _oe_enclave
 
     /* Manager for switchless calls */
     oe_switchless_call_manager_t* switchless_manager;
+
+    /* Modules within the enclave */
+    oe_debug_module_t* debug_modules;
+    size_t num_debug_modules;
 } oe_enclave_t;
 
 /* Get the event for the given TCS */

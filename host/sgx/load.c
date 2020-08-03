@@ -45,7 +45,10 @@ done:
     return result;
 }
 
-oe_result_t oe_load_enclave_image(const char* path, oe_enclave_image_t* image)
+oe_result_t oe_load_enclave_image(
+    const char* path,
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
     oe_image_type type;
@@ -60,7 +63,7 @@ oe_result_t oe_load_enclave_image(const char* path, oe_enclave_image_t* image)
         case OE_IMAGE_TYPE_NONE:
             OE_RAISE_MSG(OE_FAILURE, "Bad image type:OE_IMAGE_TYPE_NONE", NULL);
         case OE_IMAGE_TYPE_ELF:
-            OE_RAISE(oe_load_elf_enclave_image(path, image));
+            OE_RAISE(oe_load_elf_enclave_image(path, image, enclave));
     }
 done:
     return result;

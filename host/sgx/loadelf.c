@@ -753,7 +753,10 @@ done:
     return result;
 }
 
-static oe_result_t _patch(oe_enclave_image_t* image, size_t enclave_size)
+static oe_result_t _patch(
+    oe_enclave_image_t* image,
+    size_t enclave_size,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
     oe_sgx_enclave_properties_t* oeprops;
@@ -799,6 +802,14 @@ static oe_result_t _patch(oe_enclave_image_t* image, size_t enclave_size)
                 break;
             }
         }
+
+        uint64_t module_address = enclave->addr;
+        module_address += image->image_size + image->reloc_size;
+
+        // Convert virtual addresses to actuall address.
+        enclave->debug_modules[0].base_address = module_address;
+        enclave->debug_modules[0].size =
+            simage->image_size + simage->reloc_size;
     }
 
     oeprops->image_info.enclave_size = enclave_size;
@@ -915,7 +926,8 @@ done:
 
 static oe_result_t _load_secondary_modules(
     const char* path,
-    oe_enclave_image_t* image)
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
     char* module_name = NULL;
@@ -958,8 +970,20 @@ static oe_result_t _load_secondary_modules(
         OE_CHECK(_load_elf_image(
             secondary_image_path, secondary_image, 0 /* secondary image*/));
 
+        enclave->debug_modules =
+            (oe_debug_module_t*)calloc(1, sizeof(oe_debug_module_t));
+        if (!enclave->debug_modules)
+            OE_RAISE(OE_OUT_OF_MEMORY);
+        enclave->num_debug_modules = 1;
+
+        enclave->debug_modules[0].magic = OE_DEBUG_MODULE_MAGIC;
+        enclave->debug_modules[0].version = 1;
+        enclave->debug_modules[0].path = secondary_image_path;
+        enclave->debug_modules[0].path_length = strlen(secondary_image_path);
+
         image->secondary_image = secondary_image;
         secondary_image = NULL;
+        secondary_image_path = NULL;
     }
     else
     {
@@ -978,7 +1002,8 @@ done:
 
 oe_result_t oe_load_elf_enclave_image(
     const char* path,
-    oe_enclave_image_t* image)
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
 
@@ -988,7 +1013,7 @@ oe_result_t oe_load_elf_enclave_image(
     OE_CHECK(_load_elf_image(path, image, 1 /* primary image */));
 
     /* Load secondary modules into memory */
-    OE_CHECK(_load_secondary_modules(path, image));
+    OE_CHECK(_load_secondary_modules(path, image, enclave));
 
     /* Load the relocations into memory (zero-padded to next page size) */
     if (elf64_load_relocations(

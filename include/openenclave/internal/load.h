@@ -107,7 +107,10 @@ struct _oe_enclave_image
         oe_enclave_t* enclave,
         uint64_t* vaddr);
 
-    oe_result_t (*patch)(oe_enclave_image_t* image, size_t enclave_size);
+    oe_result_t (*patch)(
+        oe_enclave_image_t* image,
+        size_t enclave_size,
+        oe_enclave_t* enclave);
 
     oe_result_t (*sgx_load_enclave_properties)(
         const oe_enclave_image_t* image,
@@ -122,11 +125,15 @@ struct _oe_enclave_image
     oe_result_t (*unload)(oe_enclave_image_t* image);
 };
 
-oe_result_t oe_load_enclave_image(const char* path, oe_enclave_image_t* image);
+oe_result_t oe_load_enclave_image(
+    const char* path,
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave);
 
 oe_result_t oe_load_elf_enclave_image(
     const char* path,
-    oe_enclave_image_t* image);
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave);
 
 oe_result_t oe_load_pe_enclave_image(
     const char* path,
