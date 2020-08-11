@@ -68,13 +68,14 @@ typedef enum _oe_image_type
 struct _oe_enclave_image
 {
     char* image_base;   /* base of image */
-    size_t image_size;  /* rva of entry_rva point */
-    uint64_t entry_rva; /* rva of .text section */
-    uint64_t text_rva;  /* rva and file position of .oeinfo section */
+    size_t image_size;  /* size of the image */
+    uint64_t image_rva; /* rva of the image within the enclave binary */
+    uint64_t entry_rva; /* rva of entry_rva point */
+    uint64_t text_rva;  /* rva of .text section */
 
     /* N.B. file position is needed when we need to write back  */
     /*      oe_sgx_enclave_properties_t during signing          */
-    uint64_t oeinfo_rva;
+    uint64_t oeinfo_rva; /* rva and file position of .oeinfo section */
     uint64_t oeinfo_file_pos;
 
     /* size of relocation */

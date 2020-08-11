@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include <openenclave/enclave.h>
+#include <openenclave/internal/tests.h>
 #include <stdio.h>
 
 #define OE_DYNLINK_SHARED_LIBRARY(name)                           \
@@ -25,6 +26,7 @@ void enc_call_foo()
         printf("foo function defined in secondary module\n");
         int value = foo(8);
         printf("foo(8) = %d\n", value);
+        OE_TEST(value == 64);
     }
     else
     {
@@ -35,7 +37,11 @@ void enc_call_foo()
     {
         printf("add function defined in secondary module\n");
         int value = add(8, 7);
-        printf("add(8, 7) = %d (add adds 500 to result)\n", value);
+        printf(
+            "add(8, 7) = %d (adds k to result. k = 800 after constructor "
+            "call)\n",
+            value);
+        OE_TEST(value == 815);
     }
     else
     {

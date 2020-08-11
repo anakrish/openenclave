@@ -6,6 +6,7 @@
 #include <openenclave/internal/print.h>
 #include "echo_t.h"
 
+int ng = 0;
 char* oe_host_strdup(const char* str)
 {
     size_t n = oe_strlen(str);
@@ -15,7 +16,12 @@ char* oe_host_strdup(const char* str)
     if (dup)
         memcpy(dup, str, n + 1);
 
-    return dup;
+    return dup + ng - ng;
+}
+
+__attribute__((constructor)) static void foo()
+{
+    ng = 8;
 }
 
 int enc_echo(char* in, char out[100])

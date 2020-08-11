@@ -9,6 +9,7 @@
 #include <openenclave/internal/calls.h>
 #include <openenclave/internal/load.h>
 #include <openenclave/internal/mem.h>
+#include <openenclave/internal/module.h>
 #include <openenclave/internal/properties.h>
 #include <openenclave/internal/raise.h>
 #include <openenclave/internal/safecrt.h>
@@ -645,7 +646,6 @@ static oe_result_t _add_pages(
     return _add_pages_impl(image, context, enclave, vaddr, enclave->addr);
 }
 
-
 static oe_result_t _get_dynamic_symbol_rva(
     oe_enclave_image_t* image,
     const char* name,
@@ -686,66 +686,101 @@ done:
     return result;
 }
 
+static oe_result_t _link_symbols(
+    oe_enclave_image_t* image,
+    oe_enclave_image_t** deps,
+    uint64_t num_deps)
+{
+    oe_result_t result = OE_UNEXPECTED;
+
+    const elf64_sym_t* symtab = NULL;
+    size_t symtab_size = 0;
+    if (elf64_get_dynamic_symbol_table(
+            &image->u.elf.elf, &symtab, &symtab_size) != 0)
+        goto done;
+
+    elf64_rela_t* relocs = (elf64_rela_t*)image->u.elf.reloc_data;
+    uint64_t nrelocs = image->reloc_size / sizeof(relocs[0]);
+    for (size_t i = 0; i < nrelocs; i++)
+    {
+        elf64_rela_t* p = &relocs[i];
+
+        /* If zero-padded bytes reached */
+        if (p->r_offset == 0)
+            break;
+
+        uint64_t sym_idx = ELF64_R_SYM(p->r_info);
+        uint64_t reloc_type = ELF64_R_TYPE(p->r_info);
+
+        /* Fix links to secondary module */
+        if (reloc_type == R_X86_64_GLOB_DAT)
+        {
+            const elf64_sym_t* sym = &symtab[sym_idx];
+            const char* name =
+                elf64_get_string_from_dynstr(&image->u.elf.elf, sym->st_name);
+            if (name == NULL)
+                OE_RAISE(OE_NOT_FOUND);
+
+            OE_TRACE_INFO("Linking symbol %s with idx  %lu", name, sym_idx);
+
+            // Find the definition of the symbol in this image.
+            oe_enclave_image_t* symbol_image = NULL;
+            elf64_sym_t sym_defn = {0};
+            if (elf64_find_dynamic_symbol_by_name(
+                    &image->u.elf.elf, name, &sym_defn) == 0 &&
+                sym_defn.st_value)
+            {
+                symbol_image = image;
+            }
+            else
+            {
+                // Search for the symbol in other images.
+                for (uint64_t j = 0; j < num_deps; ++j)
+                {
+                    if (elf64_find_dynamic_symbol_by_name(
+                            &deps[j]->u.elf.elf, name, &sym_defn) == 0 &&
+                        sym_defn.st_value)
+                    {
+                        symbol_image = deps[j];
+                        break;
+                    }
+                }
+            }
+
+            if (symbol_image)
+            {
+                p->r_addend = (int64_t)(
+                    symbol_image->image_rva + sym_defn.st_value -
+                    image->image_rva);
+                OE_TRACE_INFO(
+                    "%s vaddr=0x%lx, r_addend = 0xlx",
+                    sym_defn.st_value,
+                    p->r_addend);
+            }
+            else
+            {
+                OE_TRACE_INFO("symbol %s not found in secondary image\n", name);
+            }
+        }
+    }
+
+    result = OE_OK;
+done:
+    return result;
+}
+
 static oe_result_t _program_link(oe_enclave_image_t* image)
 {
     oe_result_t result = OE_UNEXPECTED;
     if (image->secondary_image)
     {
         OE_TRACE_INFO("Performing program linking\n");
-        // Iterate through relocations in first image.
-        elf64_rela_t* relocs = (elf64_rela_t*)image->u.elf.reloc_data;
-        uint64_t nrelocs = image->reloc_size / sizeof(relocs[0]);
-        OE_TRACE_INFO("num relocs = %lu\n", nrelocs);
 
-        const elf64_sym_t* symtab = NULL;
-        size_t symtab_size = 0;
-        if (elf64_get_dynamic_symbol_table(
-                &image->u.elf.elf, &symtab, &symtab_size) != 0)
-            goto done;
+        oe_enclave_image_t* deps[] = {image->secondary_image};
+        OE_CHECK(_link_symbols(image, deps, 1));
 
-        uint64_t module_offset = image->image_size + image->reloc_size;
-        OE_UNUSED(module_offset);
-        for (size_t i = 0; i < nrelocs; i++)
-        {
-            elf64_rela_t* p = &relocs[i];
-
-            /* If zero-padded bytes reached */
-            if (p->r_offset == 0)
-                break;
-
-            uint64_t sym_idx = ELF64_R_SYM(p->r_info);
-            uint64_t reloc_type = ELF64_R_TYPE(p->r_info);
-
-            /* Fix links to secondary module */
-            if (reloc_type == R_X86_64_GLOB_DAT)
-            {
-                const elf64_sym_t* sym = &symtab[sym_idx];
-                const char* name = elf64_get_string_from_dynstr(
-                    &image->u.elf.elf, sym->st_name);
-                if (name == NULL)
-                    OE_RAISE(OE_NOT_FOUND);
-
-                OE_TRACE_INFO("Linking symbol %s with idx  %lu", name, sym_idx);
-
-                // Find the definition of the symbol in secondary image.
-                elf64_sym_t sym_defn = {0};
-                if (elf64_find_dynamic_symbol_by_name(
-                        &image->secondary_image->u.elf.elf, name, &sym_defn) ==
-                    0)
-                {
-                    p->r_addend = (int64_t)(module_offset + sym_defn.st_value);
-                    OE_TRACE_INFO(
-                        "%s vaddr=0x%lx, r_addend = 0xlx",
-                        sym_defn.st_value,
-                        p->r_addend);
-                }
-                else
-                {
-                    OE_TRACE_INFO(
-                        "symbol %s not found in secondary image\n", name);
-                }
-            }
-        }
+        // Process secondary images.
+        OE_CHECK(_link_symbols(deps[0], deps, 1));
     }
 
     result = OE_OK;
@@ -763,6 +798,8 @@ static oe_result_t _patch(
     size_t i;
     uint64_t enclave_rva = 0;
     uint64_t aligned_size = 0;
+    oe_module_link_info_t* link_info;
+    size_t linked_modules_rva = 0;
 
     oeprops =
         (oe_sgx_enclave_properties_t*)(image->image_base + image->oeinfo_rva);
@@ -770,6 +807,11 @@ static oe_result_t _patch(
     assert((image->image_size & (OE_PAGE_SIZE - 1)) == 0);
     assert((image->reloc_size & (OE_PAGE_SIZE - 1)) == 0);
     assert((enclave_size & (OE_PAGE_SIZE - 1)) == 0);
+
+    OE_CHECK(_get_dynamic_symbol_rva(
+        image, "oe_linked_modules", &linked_modules_rva));
+    link_info =
+        (oe_module_link_info_t*)(image->image_base + linked_modules_rva);
 
     /* Clear certain ELF header fields */
     for (i = 0; i < image->u.elf.num_segments; i++)
@@ -810,6 +852,33 @@ static oe_result_t _patch(
         enclave->debug_modules[0].base_address = module_address;
         enclave->debug_modules[0].size =
             simage->image_size + simage->reloc_size;
+
+        uint64_t module_rva = image->image_size + image->reloc_size;
+        simage->image_rva = module_rva;
+        link_info[0].base_rva = module_rva;
+        link_info[0].reloc_rva = module_rva + simage->image_size;
+        link_info[0].reloc_size = simage->reloc_size;
+        link_info[0].tdata_rva = module_rva + simage->tdata_rva;
+        link_info[0].tdata_size = module_rva + simage->tdata_size;
+        link_info[0].tdata_align = module_rva + simage->tdata_align;
+        link_info[0].tbss_size = module_rva + simage->tbss_size;
+        link_info[0].tbss_align = module_rva + simage->tbss_align;
+        link_info[0].entry_rva = module_rva + simage->entry_rva;
+
+        elf64_shdr_t init_section = {0};
+        if (elf64_find_section_header(
+                &simage->u.elf.elf, ".init_array", &init_section) == 0)
+        {
+            link_info[0].init_array_rva = module_rva + init_section.sh_addr;
+            link_info[0].init_array_size = init_section.sh_size;
+        }
+        elf64_shdr_t fini_section = {0};
+        if (elf64_find_section_header(
+                &simage->u.elf.elf, ".fini_array", &fini_section) == 0)
+        {
+            link_info[0].fini_array_rva = module_rva + fini_section.sh_addr;
+            link_info[0].fini_array_size = fini_section.sh_size;
+        }
     }
 
     oeprops->image_info.enclave_size = enclave_size;
