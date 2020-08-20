@@ -747,7 +747,7 @@ oe_result_t oe_sgx_build_enclave(
         OE_RAISE(OE_INVALID_PARAMETER);
 
     /* Load the elf object */
-    if (oe_load_enclave_image(path, &oeimage) != OE_OK)
+    if (oe_load_enclave_image(path, &oeimage, enclave) != OE_OK)
         OE_RAISE(OE_FAILURE);
 
     // If the **properties** parameter is non-null, use those properties.
@@ -815,7 +815,7 @@ oe_result_t oe_sgx_build_enclave(
     enclave->size = enclave_size;
 
     /* Patch image */
-    OE_CHECK(oeimage.sgx_patch(&oeimage, context, enclave_size));
+    OE_CHECK(oeimage.sgx_patch(&oeimage, context, enclave, enclave_size));
 
     /* Add image to enclave */
     OE_CHECK(oeimage.add_pages(&oeimage, context, enclave, &vaddr));
@@ -995,6 +995,9 @@ oe_result_t oe_create_enclave(
 
         enclave->debug_enclave = debug_enclave;
         oe_debug_notify_enclave_created(debug_enclave);
+
+        for (size_t i = 0; i < enclave->num_debug_modules; ++i)
+            oe_debug_notify_module_loaded(&enclave->debug_modules[i]);
     }
 
     /* Enclave initialization invokes global constructors which could make
@@ -1056,6 +1059,12 @@ oe_result_t oe_terminate_enclave(oe_enclave_t* enclave)
 
     if (enclave->debug_enclave)
     {
+        for (size_t i = 0; i < enclave->num_debug_modules; ++i)
+        {
+            oe_debug_notify_module_unloaded(&enclave->debug_modules[i]);
+            free(enclave->debug_modules[i].path);
+        }
+
         oe_debug_notify_enclave_terminated(enclave->debug_enclave);
         free(enclave->debug_enclave->tcs_array);
         free(enclave->debug_enclave);

@@ -778,6 +778,7 @@ done:
 static oe_result_t _patch(
     oe_enclave_image_t* enclave_image,
     oe_sgx_load_context_t* context,
+    oe_enclave_t* enclave,
     size_t enclave_size)
 {
     oe_enclave_elf_image_t* image = &enclave_image->elf;
@@ -824,6 +825,17 @@ static oe_result_t _patch(
                 ehdr->e_shstrndx = 0;
                 break;
             }
+        }
+
+        if (enclave->debug)
+        {
+            uint64_t module_address = enclave->addr;
+            module_address += image->image_size + image->reloc_size;
+
+            // Convert virtual addresses to actuall address.
+            enclave->debug_modules[0].base_address = module_address;
+            enclave->debug_modules[0].size =
+                simage->image_size + simage->reloc_size;
         }
     }
 
@@ -943,7 +955,8 @@ done:
 
 static oe_result_t _load_secondary_modules(
     const char* path,
-    oe_enclave_image_t* image)
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
     char* module_name = NULL;
@@ -986,8 +999,24 @@ static oe_result_t _load_secondary_modules(
         OE_CHECK(_load_elf_image(
             secondary_image_path, secondary_image /* secondary image*/));
 
+        if (enclave->debug)
+        {
+            enclave->debug_modules =
+                (oe_debug_module_t*)calloc(1, sizeof(oe_debug_module_t));
+            if (!enclave->debug_modules)
+                OE_RAISE(OE_OUT_OF_MEMORY);
+            enclave->num_debug_modules = 1;
+
+            enclave->debug_modules[0].magic = OE_DEBUG_MODULE_MAGIC;
+            enclave->debug_modules[0].version = 1;
+            enclave->debug_modules[0].path = secondary_image_path;
+            enclave->debug_modules[0].path_length =
+                strlen(secondary_image_path);
+        }
+
         image->secondary_image = secondary_image;
         secondary_image = NULL;
+        secondary_image_path = NULL;
     }
     else
     {
@@ -1006,7 +1035,8 @@ done:
 
 oe_result_t oe_load_elf_enclave_image(
     const char* path,
-    oe_enclave_image_t* image)
+    oe_enclave_image_t* image,
+    oe_enclave_t* enclave)
 {
     oe_result_t result = OE_UNEXPECTED;
 
@@ -1016,7 +1046,7 @@ oe_result_t oe_load_elf_enclave_image(
     OE_CHECK(_load_elf_image(path, &image->elf));
 
     /* Load secondary modules into memory */
-    OE_CHECK(_load_secondary_modules(path, image));
+    OE_CHECK(_load_secondary_modules(path, image, enclave));
 
     /* Verify that primary enclave image properties are found */
     if (!image->elf.entry_rva)
