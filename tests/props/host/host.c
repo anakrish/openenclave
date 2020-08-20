@@ -101,7 +101,7 @@ static oe_result_t _sgx_load_enclave_properties(
         OE_RAISE(OE_INVALID_PARAMETER);
 
     /* Load the ELF image */
-    if (oe_load_enclave_image(path, &oeimage) != 0)
+    if (oe_load_enclave_image(path, &oeimage, NULL) != 0)
         OE_RAISE(OE_FAILURE);
 
     /* Load the SGX enclave properties */

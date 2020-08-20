@@ -24,7 +24,7 @@ oe_result_t oe_read_oeinfo_sgx(
         OE_RAISE(OE_INVALID_PARAMETER);
 
     /* Load the ELF image */
-    OE_CHECK(oe_load_enclave_image(path, &oeimage));
+    OE_CHECK(oe_load_enclave_image(path, &oeimage, NULL));
 
     /* Load the SGX enclave properties */
     OE_CHECK(oe_sgx_load_enclave_properties(
@@ -61,7 +61,7 @@ oe_result_t oe_write_oeinfo_sgx(
 
     /* Open ELF file */
     OE_CHECK_ERR(
-        oe_load_enclave_image(path, &oeimage),
+        oe_load_enclave_image(path, &oeimage, NULL),
         "Cannot load ELF file: %s",
         path);
 

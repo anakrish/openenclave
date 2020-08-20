@@ -9,6 +9,7 @@
 #include <openenclave/internal/calls.h>
 #include <openenclave/internal/load.h>
 #include <openenclave/internal/mem.h>
+#include <openenclave/internal/module.h>
 #include <openenclave/internal/properties.h>
 #include <openenclave/internal/raise.h>
 #include <openenclave/internal/safecrt.h>
@@ -786,6 +787,8 @@ static oe_result_t _patch(
     oe_sgx_enclave_properties_t* oeprops;
     uint64_t enclave_rva = 0;
     uint64_t aligned_size = 0;
+    oe_module_link_info_t* link_info;
+    size_t linked_modules_rva = 0;
 
     oeprops =
         (oe_sgx_enclave_properties_t*)(image->image_base + image->oeinfo_rva);
@@ -793,6 +796,11 @@ static oe_result_t _patch(
     assert((image->image_size & (OE_PAGE_SIZE - 1)) == 0);
     assert((image->reloc_size & (OE_PAGE_SIZE - 1)) == 0);
     assert((enclave_size & (OE_PAGE_SIZE - 1)) == 0);
+
+    OE_CHECK(_get_dynamic_symbol_rva(
+        image, "oe_linked_modules", &linked_modules_rva));
+    link_info =
+        (oe_module_link_info_t*)(image->image_base + linked_modules_rva);
 
     /* Clear certain ELF header fields */
     for (size_t i = 0; i < image->num_segments; i++)
@@ -836,6 +844,32 @@ static oe_result_t _patch(
             enclave->debug_modules[0].base_address = module_address;
             enclave->debug_modules[0].size =
                 simage->image_size + simage->reloc_size;
+        }
+
+        uint64_t module_rva = image->image_size + image->reloc_size;
+        link_info[0].base_rva = module_rva;
+        link_info[0].reloc_rva = module_rva + simage->image_size;
+        link_info[0].reloc_size = simage->reloc_size;
+        link_info[0].tdata_rva = module_rva + simage->tdata_rva;
+        link_info[0].tdata_size = module_rva + simage->tdata_size;
+        link_info[0].tdata_align = module_rva + simage->tdata_align;
+        link_info[0].tbss_size = module_rva + simage->tbss_size;
+        link_info[0].tbss_align = module_rva + simage->tbss_align;
+        link_info[0].entry_rva = module_rva + simage->entry_rva;
+
+        elf64_shdr_t init_section = {0};
+        if (elf64_find_section_header(
+                &simage->elf, ".init_array", &init_section) == 0)
+        {
+            link_info[0].init_array_rva = module_rva + init_section.sh_addr;
+            link_info[0].init_array_size = init_section.sh_size;
+        }
+        elf64_shdr_t fini_section = {0};
+        if (elf64_find_section_header(
+                &simage->elf, ".fini_array", &fini_section) == 0)
+        {
+            link_info[0].fini_array_rva = module_rva + fini_section.sh_addr;
+            link_info[0].fini_array_size = fini_section.sh_size;
         }
     }
 
@@ -999,7 +1033,7 @@ static oe_result_t _load_secondary_modules(
         OE_CHECK(_load_elf_image(
             secondary_image_path, secondary_image /* secondary image*/));
 
-        if (enclave->debug)
+        if (enclave && enclave->debug)
         {
             enclave->debug_modules =
                 (oe_debug_module_t*)calloc(1, sizeof(oe_debug_module_t));

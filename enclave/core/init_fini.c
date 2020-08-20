@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include "init_fini.h"
+#include <openenclave/internal/globals.h>
 
 /*
 **==============================================================================
@@ -55,15 +56,39 @@
 **==============================================================================
 */
 
-void oe_call_init_functions(void)
+static void _call_init_functions(
+    void (**init_array_start)(void),
+    void (**init_array_end)(void))
 {
     void (**fn)(void);
+    for (fn = init_array_start; fn < init_array_end; fn++)
+    {
+        (*fn)();
+    }
+}
+
+void oe_call_init_functions(void)
+{
     extern void (*__init_array_start)(void);
     extern void (*__init_array_end)(void);
 
-    for (fn = &__init_array_start; fn < &__init_array_end; fn++)
+    const uint8_t* baseaddr = (const uint8_t*)__oe_get_enclave_base();
+
+    _call_init_functions(&__init_array_start, &__init_array_end);
+
+    // Now call the start functions of secondary modules in order.
+    for (size_t i = 0; i < OE_MAX_NUM_MODULES; ++i)
     {
-        (*fn)();
+        const oe_module_link_info_t* link_info = &oe_linked_modules[i];
+        // Check if module is valid. Reloc rva will be non zero.
+        if (link_info->init_array_rva && link_info->init_array_size)
+        {
+            _call_init_functions(
+                (void (**)(void))(baseaddr + link_info->init_array_rva),
+                (void (**)(void))(
+                    baseaddr + link_info->init_array_rva +
+                    link_info->init_array_size));
+        }
     }
 }
 
@@ -111,14 +136,37 @@ void oe_call_init_functions(void)
 **==============================================================================
 */
 
-void oe_call_fini_functions(void)
+static void _call_fini_functions(
+    void (**fini_array_start)(void),
+    void (**fini_array_end)(void))
 {
     void (**fn)(void);
-    extern void (*__fini_array_start)(void);
-    extern void (*__fini_array_end)(void);
-
-    for (fn = &__fini_array_end - 1; fn >= &__fini_array_start; fn--)
+    for (fn = fini_array_end - 1; fn >= fini_array_start; fn--)
     {
         (*fn)();
     }
+}
+
+void oe_call_fini_functions(void)
+{
+    extern void (*__fini_array_start)(void);
+    extern void (*__fini_array_end)(void);
+    const uint8_t* baseaddr = (const uint8_t*)__oe_get_enclave_base();
+
+    // Now call the start functions of secondary modules in reverse order.
+    for (size_t i = OE_MAX_NUM_MODULES - 1; i < OE_MAX_NUM_MODULES; --i)
+    {
+        const oe_module_link_info_t* link_info = &oe_linked_modules[i];
+        // Check if module is valid. Reloc rva will be non zero.
+        if (link_info->fini_array_rva && link_info->fini_array_size)
+        {
+            _call_fini_functions(
+                (void (**)(void))(baseaddr + link_info->fini_array_rva),
+                (void (**)(void))(
+                    baseaddr + link_info->fini_array_rva +
+                    link_info->fini_array_size));
+        }
+    }
+
+    _call_fini_functions(&__fini_array_start, &__fini_array_end);
 }
