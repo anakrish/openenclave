@@ -4,6 +4,7 @@
 #include <openenclave/enclave.h>
 #include <openenclave/internal/tests.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define OE_DYNLINK_SHARED_LIBRARY(name)                           \
     extern void* __start_oemoduls;                                \
@@ -18,6 +19,17 @@ OE_DYNLINK_SHARED_LIBRARY("../sm/libsm.so")
 __attribute__((weak)) int foo(int a);
 __attribute__((weak)) int add(int a, int b);
 __attribute__((weak)) int sub(int a, int b);
+__attribute__((weak)) int test_malloc(int n);
+OE_EXPORT void* enc_malloc(size_t n)
+{
+    printf("enclave malloc called\n");
+    return malloc(n);
+}
+OE_EXPORT void enc_free(void* p)
+{
+    printf("enclave free called\n");
+    return free(p);
+}
 
 void enc_call_foo()
 {
@@ -58,6 +70,18 @@ void enc_call_foo()
     else
     {
         printf("sub not defined\n");
+    }
+
+    if (test_malloc)
+    {
+        printf("test_malloc defined in secondary module\n");
+        printf("Calling test_malloc which will call back to primary module\n");
+        test_malloc(500);
+        printf("Completed");
+    }
+    else
+    {
+        printf("test_malloc not defined\n");
     }
 }
 

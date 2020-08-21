@@ -5,7 +5,7 @@ add_library(sm SHARED sm.c start.c)
 
 target_compile_options(
   sm
-  PUBLIC -fPIC -nostdinc -fstack-protector-strong
+  PUBLIC -fPIC -fstack-protector-strong
          # Preserve frame-pointer in Release mode to enable oe_backtrace.
          -fno-omit-frame-pointer -ftls-model=initial-exec)
 

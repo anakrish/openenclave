@@ -710,12 +710,108 @@ done:
     return result;
 }
 
+static oe_result_t _resolve_symbols(
+    oe_enclave_elf_image_t** modules,
+    uint64_t num_modules)
+{
+    oe_result_t result = OE_UNEXPECTED;
+    uint64_t current_module_offset = 0;
+    for (uint64_t m = 0; m < num_modules; ++m)
+    {
+        oe_enclave_elf_image_t* image = modules[m];
+
+        const elf64_sym_t* symtab = NULL;
+        size_t symtab_size = 0;
+        if (elf64_get_dynamic_symbol_table(
+                &image->elf, &symtab, &symtab_size) != 0)
+            continue;
+
+        // Iterate through relocations in first image.
+        elf64_rela_t* relocs = (elf64_rela_t*)image->reloc_data;
+        uint64_t nrelocs = image->reloc_size / sizeof(relocs[0]);
+        OE_TRACE_INFO("num relocs = %lu\n", nrelocs);
+
+        for (size_t i = 0; i < nrelocs; i++)
+        {
+            elf64_rela_t* p = &relocs[i];
+
+            /* If zero-padded bytes reached */
+            if (p->r_offset == 0)
+                break;
+
+            uint64_t sym_idx = ELF64_R_SYM(p->r_info);
+            uint64_t reloc_type = ELF64_R_TYPE(p->r_info);
+
+            /* Fix links to secondary module */
+            if (reloc_type == R_X86_64_GLOB_DAT)
+            {
+                const elf64_sym_t* sym = &symtab[sym_idx];
+                const char* name =
+                    elf64_get_string_from_dynstr(&image->elf, sym->st_name);
+                if (name == NULL)
+                    OE_RAISE(OE_NOT_FOUND);
+
+                OE_TRACE_INFO("Linking symbol %s with idx  %lu", name, sym_idx);
+
+                // Find the definition of the symbol in images.
+                elf64_sym_t sym_defn = {0};
+                bool found = false;
+                uint64_t module_offset = 0;
+                for (uint64_t j = 0; j < num_modules; ++j)
+                {
+                    oe_enclave_elf_image_t* other_image = modules[j];
+                    if (elf64_find_dynamic_symbol_by_name(
+                            &other_image->elf, name, &sym_defn) == 0 &&
+                        sym_defn.st_value)
+                    {
+                        p->r_addend = (int64_t)(
+                            module_offset + sym_defn.st_value -
+                            current_module_offset);
+                        OE_TRACE_INFO(
+                            "%s vaddr=0x%lx, r_addend = 0xlx",
+                            sym_defn.st_value,
+                            p->r_addend);
+                        found = true;
+                        break;
+                    }
+                    module_offset +=
+                        other_image->image_size + other_image->reloc_size;
+                }
+
+                if (!found)
+                {
+                    OE_TRACE_INFO(
+                        "symbol %s not found in secondary image\n", name);
+                }
+            }
+        }
+
+        current_module_offset += image->image_size + image->reloc_size;
+    }
+
+    result = OE_OK;
+done:
+    return result;
+}
+
 static oe_result_t _program_link(oe_enclave_image_t* image)
 {
     oe_result_t result = OE_UNEXPECTED;
+    if (!image->secondary_image)
+    {
+        result = OE_OK;
+        goto done;
+    }
+
+    OE_TRACE_INFO("Performing program linking\n");
+
     if (image->secondary_image)
     {
-        OE_TRACE_INFO("Performing program linking\n");
+        oe_enclave_elf_image_t* modules[] = {&image->elf,
+                                             image->secondary_image};
+        OE_CHECK(_resolve_symbols(modules, 2));
+        result = OE_OK;
+        goto done;
         // Iterate through relocations in first image.
         elf64_rela_t* relocs = (elf64_rela_t*)image->elf.reloc_data;
         uint64_t nrelocs = image->elf.reloc_size / sizeof(relocs[0]);
