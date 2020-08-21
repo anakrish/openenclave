@@ -851,10 +851,10 @@ static oe_result_t _patch(
         link_info[0].reloc_rva = module_rva + simage->image_size;
         link_info[0].reloc_size = simage->reloc_size;
         link_info[0].tdata_rva = module_rva + simage->tdata_rva;
-        link_info[0].tdata_size = module_rva + simage->tdata_size;
-        link_info[0].tdata_align = module_rva + simage->tdata_align;
-        link_info[0].tbss_size = module_rva + simage->tbss_size;
-        link_info[0].tbss_align = module_rva + simage->tbss_align;
+        link_info[0].tdata_size = simage->tdata_size;
+        link_info[0].tdata_align = simage->tdata_align;
+        link_info[0].tbss_size = simage->tbss_size;
+        link_info[0].tbss_align = simage->tbss_align;
         link_info[0].entry_rva = module_rva + simage->entry_rva;
 
         elf64_shdr_t init_section = {0};

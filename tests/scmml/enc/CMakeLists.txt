@@ -20,4 +20,5 @@ add_enclave(
   ${CMAKE_CURRENT_BINARY_DIR}/scmml_t.c)
 
 enclave_include_directories(scmml_enc PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-enclave_link_libraries(scmml_enc sm oelibc)
+enclave_link_libraries(scmml_enc oelibc)
+add_dependencies(scmml_enc sm)

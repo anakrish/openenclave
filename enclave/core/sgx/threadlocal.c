@@ -239,6 +239,51 @@ static void _initialize_allocator(void)
     oe_once(&_once, _call_oe_allocator_init);
 }
 
+static uint8_t* _get_thread_local_data_start_for_module(
+    uint8_t* end,
+    uint64_t tdata_size,
+    uint64_t tdata_align,
+    uint64_t tbss_size,
+    uint64_t tbss_align)
+{
+    if (!tdata_size && !tbss_size)
+        return end;
+
+    uint8_t* start = end;
+    uint64_t alignment = 0;
+
+    // Alignments must be non-zero.
+    if (tdata_size && !tdata_align)
+        oe_abort();
+    if (tbss_size && !tbss_align)
+        oe_abort();
+
+    // Choose the largest of the two alignments to align both the sections.
+    // Assert that one alignment is a multiple of the other.
+    if (tdata_align >= tbss_align)
+    {
+        alignment = tdata_align;
+        if (tbss_align && alignment % tbss_align)
+            oe_abort();
+    }
+    else
+    {
+        alignment = tbss_align;
+        if (tdata_align && alignment % tdata_align)
+            oe_abort();
+    }
+
+    // Alignment must be a power of two.
+    if (alignment & (alignment - 1))
+        oe_abort();
+
+    // Align both the sections.
+    start -= _get_aligned_size(tbss_size, alignment);
+    start -= _get_aligned_size(tdata_size, alignment);
+
+    return start;
+}
+
 /**
  * Return pointer to start of tls data.
  *    tls-data-start = %FS - (aligned .tdata size + aligned .tbss size)
@@ -250,36 +295,41 @@ static uint8_t* _get_thread_local_data_start(oe_sgx_td_t* td)
         return NULL;
 
     uint8_t* fs = _get_fs_from_td(td);
-    uint64_t alignment = 0;
+    return _get_thread_local_data_start_for_module(
+        fs, _tdata_size, _tdata_align, _tbss_size, _tbss_align);
+}
 
-    // Alignments must be non-zero.
-    if (!_tdata_align || !_tbss_align)
-        oe_abort();
+static void _apply_thread_local_relocations(
+    const uint8_t* baseaddr,
+    uint8_t* module_tls_start,
+    uint8_t* fs,
+    const elf64_rela_t* relocs,
+    size_t reloc_size)
 
-    // Choose the largest of the two alignments to align both the sections.
-    // Assert that one alignment is a multiple of the other.
-    if (_tdata_align >= _tbss_align)
+{
+    // Note: For an enclave, thread-local relocations always set the
+    // value of the tpoff variables to a computed constant value. Hence
+    // this is inherently thread-safe and also can be called multiple
+    // times.
+    size_t nrelocs = reloc_size / sizeof(elf64_rela_t);
+
+    for (size_t i = 0; i < nrelocs; i++)
     {
-        alignment = _tdata_align;
-        if (alignment % _tbss_align)
-            oe_abort();
+        const elf64_rela_t* p = &relocs[i];
+
+        // If zero-padded bytes reached
+        if (p->r_offset == 0)
+            break;
+
+        if (ELF64_R_TYPE(p->r_info) == R_X86_64_TPOFF64)
+        {
+            // Compute address of tpoff variable
+            int64_t* tpoff = (int64_t*)(baseaddr + p->r_offset);
+
+            // Set tpoff to the offset value relative to FS
+            *tpoff = (module_tls_start + p->r_addend - fs);
+        }
     }
-    else
-    {
-        alignment = _tbss_align;
-        if (alignment % _tdata_align)
-            oe_abort();
-    }
-
-    // Alignment must be a power of two.
-    if (alignment & (alignment - 1))
-        oe_abort();
-
-    // Align both the sections.
-    fs -= _get_aligned_size(_tbss_size, alignment);
-    fs -= _get_aligned_size(_tdata_size, alignment);
-
-    return fs;
 }
 
 /**
@@ -313,36 +363,73 @@ oe_result_t oe_thread_local_init(oe_sgx_td_t* td)
         // Copy the template
         oe_memcpy_s(tls_start, _tdata_size, tdata, _tdata_size);
 
-        // Perform thread-local relocations, only run once.
+        uint8_t* baseaddr = (uint8_t*)__oe_get_enclave_base();
+        // Copy templates for secondary modules
+        uint8_t* end = tls_start;
+        for (size_t i = 0; i < OE_MAX_NUM_MODULES; ++i)
+        {
+            const oe_module_link_info_t* link_info = &oe_linked_modules[i];
+            if (link_info->tbss_size || link_info->tdata_size)
+            {
+                // uint8_t* module_baseaddr = baseaddr + link_info->base_rva;
+                uint8_t* module_tdata = baseaddr + link_info->tdata_rva;
+                uint64_t module_tdata_size = link_info->tdata_size;
+                uint8_t* module_tls_start =
+                    _get_thread_local_data_start_for_module(
+                        end,
+                        link_info->tdata_size,
+                        link_info->tdata_align,
+                        link_info->tbss_size,
+                        link_info->tbss_align);
+
+                oe_memcpy_s(
+                    module_tls_start,
+                    module_tdata_size,
+                    module_tdata,
+                    module_tdata_size);
+                end = module_tls_start;
+            }
+        }
+
+        // Perform thread-local relocations.
         if (!_thread_locals_relocated)
         {
-            // Note: For an enclave, thread-local relocations always set the
-            // value of the tpoff variables to a computed constant value. Hence
-            // this is inherently thread-safe and also can be called multiple
-            // times.
             const elf64_rela_t* relocs =
                 (const elf64_rela_t*)__oe_get_reloc_base();
-            size_t nrelocs = __oe_get_reloc_size() / sizeof(elf64_rela_t);
-            const uint8_t* baseaddr = (const uint8_t*)__oe_get_enclave_base();
 
-            for (size_t i = 0; i < nrelocs; i++)
+            _apply_thread_local_relocations(
+                baseaddr, tls_start, fs, relocs, __oe_get_reloc_size());
+
+            end = tls_start;
+            // Apply relocations for secondary image.
+            // Relocations can be applied in any order.
+            for (size_t i = 0; i < OE_MAX_NUM_MODULES; ++i)
             {
-                const elf64_rela_t* p = &relocs[i];
-
-                // If zero-padded bytes reached
-                if (p->r_offset == 0)
-                    break;
-
-                if (ELF64_R_TYPE(p->r_info) == R_X86_64_TPOFF64)
+                const oe_module_link_info_t* link_info = &oe_linked_modules[i];
+                // Check if module is valid. Reloc rva will be non zero.
+                if (link_info->tbss_size || link_info->tdata_size)
                 {
-                    // Compute address of tpoff variable
-                    int64_t* tpoff = (int64_t*)(baseaddr + p->r_offset);
+                    uint8_t* module_tls_start =
+                        _get_thread_local_data_start_for_module(
+                            end,
+                            link_info->tdata_size,
+                            link_info->tdata_align,
+                            link_info->tbss_size,
+                            link_info->tbss_align);
 
-                    // Set tpoff to the offset value relative to FS
-                    *tpoff = (tls_start + p->r_addend - fs);
+                    const elf64_rela_t* relocs =
+                        (const elf64_rela_t*)(baseaddr + link_info->reloc_rva);
+                    _apply_thread_local_relocations(
+                        (const uint8_t*)(baseaddr + link_info->base_rva),
+                        module_tls_start,
+                        fs,
+                        relocs,
+                        link_info->reloc_size);
+                    end = module_tls_start;
                 }
             }
 
+            OE_ATOMIC_MEMORY_BARRIER_RELEASE();
             _thread_locals_relocated = true;
         }
     }
@@ -363,6 +450,9 @@ oe_result_t oe_thread_local_init(oe_sgx_td_t* td)
     // and then call oe_allocator_thread_init.
     // Note that we need to initialize the allocator even when thread-local data
     // is empty (i.e., tls_start is NULL when tdata and tbss are zero).
+    _initialize_allocator();
+    oe_allocator_thread_init();
+
     _initialize_allocator();
     oe_allocator_thread_init();
 

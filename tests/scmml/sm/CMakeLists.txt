@@ -7,7 +7,7 @@ target_compile_options(
   sm
   PUBLIC -fPIC -nostdinc -fstack-protector-strong
          # Preserve frame-pointer in Release mode to enable oe_backtrace.
-         -fno-omit-frame-pointer)
+         -fno-omit-frame-pointer -ftls-model=initial-exec)
 
 target_link_libraries(
   sm

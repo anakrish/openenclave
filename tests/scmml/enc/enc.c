@@ -38,10 +38,11 @@ void enc_call_foo()
         printf("add function defined in secondary module\n");
         int value = add(8, 7);
         printf(
-            "add(8, 7) = %d (adds k to result. k = 800 after constructor "
-            "call)\n",
+            "add(8, 7) = %d (adds k - l - ch to result. k = 800 after "
+            "constructor call.\nl is a thread-local with value 800 and ch is a "
+            "thread-local with value 1).\n",
             value);
-        OE_TEST(value == 815);
+        OE_TEST(value == 14);
     }
     else
     {

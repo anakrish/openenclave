@@ -3,6 +3,9 @@
 
 #define EXPORT __attribute__((visibility("default")))
 
+__thread char ch = 1;
+__thread int l = 800;
+
 int foo(int a)
 {
     return a * a;
@@ -22,5 +25,8 @@ __attribute__((destructor)) static void my_destructor(void)
 
 int add(int a, int b)
 {
-    return a + b + k;
+    int tmp = a + b + k;
+    int tl = l;
+    int tch = ch;
+    return tmp - tl - tch;
 }
