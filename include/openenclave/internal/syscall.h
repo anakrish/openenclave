@@ -6,6 +6,7 @@
 
 #include <openenclave/bits/defs.h>
 #include <openenclave/bits/result.h>
+#include "syscall_decls.h"
 
 OE_EXTERNC_BEGIN
 

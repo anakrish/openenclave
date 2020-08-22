@@ -58,6 +58,8 @@ enclave_enable_code_coverage(oesyscall)
 
 add_enclave_dependencies(oesyscall syscall_trusted_edl)
 
+enclave_link_libraries(oesyscall PRIVATE oelibc_includes)
+
 enclave_include_directories(
   oesyscall PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
   ${PROJECT_SOURCE_DIR}/include/openenclave/corelibc)
