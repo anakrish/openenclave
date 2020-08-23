@@ -5,6 +5,8 @@
 #include <sys/syscall.h>
 #include "syscall_arch.h"
 
+#include <openenclave/internal/syscall.h>
+
 #ifndef SYSCALL_RLIM_INFINITY
 #define SYSCALL_RLIM_INFINITY (~0ULL)
 #endif
@@ -27,6 +29,9 @@ hidden long __syscall_ret(unsigned long), __syscall(syscall_arg_t, ...),
 	             syscall_arg_t, syscall_arg_t, syscall_arg_t);
 
 #ifdef SYSCALL_NO_INLINE
+
+#define OE_REGISTER_SYSCALL(idx, _idx) (oe_register_syscall(idx, (void*) OE_SYSCALL_NAME(_idx)), idx)
+
 #define __syscall0(n) (__syscall)(n)
 #define __syscall1(n,a) (__syscall)(n,__scc(a))
 #define __syscall2(n,a,b) (__syscall)(n,__scc(a),__scc(b))
@@ -50,8 +55,8 @@ hidden long __syscall_ret(unsigned long), __syscall(syscall_arg_t, ...),
 #define __SYSCALL_CONCAT(a,b) __SYSCALL_CONCAT_X(a,b)
 #define __SYSCALL_DISP(b,...) __SYSCALL_CONCAT(b,__SYSCALL_NARGS(__VA_ARGS__))(__VA_ARGS__)
 
-#define __syscall(...) __SYSCALL_DISP(__syscall,__VA_ARGS__)
-#define syscall(...) __syscall_ret(__syscall(__VA_ARGS__))
+#define __syscall(n, ...) __SYSCALL_DISP(__syscall, OE_REGISTER_SYSCALL(n, _##n), ##__VA_ARGS__)
+#define syscall(n, ...)  __syscall_ret(__SYSCALL_DISP(__syscall, OE_REGISTER_SYSCALL(n, _##n), ##__VA_ARGS__))
 
 #define socketcall __socketcall
 #define socketcall_cp __socketcall_cp
@@ -64,8 +69,8 @@ hidden long __syscall_ret(unsigned long), __syscall(syscall_arg_t, ...),
 #define __syscall_cp5(n,a,b,c,d,e) (__syscall_cp)(n,__scc(a),__scc(b),__scc(c),__scc(d),__scc(e),0)
 #define __syscall_cp6(n,a,b,c,d,e,f) (__syscall_cp)(n,__scc(a),__scc(b),__scc(c),__scc(d),__scc(e),__scc(f))
 
-#define __syscall_cp(...) __SYSCALL_DISP(__syscall_cp,__VA_ARGS__)
-#define syscall_cp(...) __syscall_ret(__syscall_cp(__VA_ARGS__))
+#define __syscall_cp(n, ...) __SYSCALL_DISP(__syscall_cp, OE_REGISTER_SYSCALL(n, _##n), ##__VA_ARGS__)
+#define syscall_cp(n, ...) __syscall_ret(__SYSCALL_DISP(__syscall_cp, OE_REGISTER_SYSCALL(n, _##n), ##__VA_ARGS__))
 
 #ifndef SYSCALL_USE_SOCKETCALL
 #define __socketcall(nm,a,b,c,d,e,f) syscall(SYS_##nm, a, b, c, d, e, f)
@@ -189,7 +194,6 @@ hidden long __syscall_ret(unsigned long), __syscall(syscall_arg_t, ...),
 #define SYS_pread SYS_pread64
 #define SYS_pwrite SYS_pwrite64
 #endif
-
 #ifdef SYS_fadvise64_64
 #undef SYS_fadvise
 #define SYS_fadvise SYS_fadvise64_64
@@ -226,19 +230,22 @@ hidden long __syscall_ret(unsigned long), __syscall(syscall_arg_t, ...),
 #define __SC_recvmmsg    19
 #define __SC_sendmmsg    20
 
+#define  OE_R_SYS_open OE_REGISTER_SYSCALL(SYS_open, _SYS_open)
+#define  OE_R_SYS_openat OE_REGISTER_SYSCALL(SYS_openat, _SYS_openat)
+
 #ifdef SYS_open
-#define __sys_open2(x,pn,fl) __syscall2(SYS_open, pn, (fl)|O_LARGEFILE)
-#define __sys_open3(x,pn,fl,mo) __syscall3(SYS_open, pn, (fl)|O_LARGEFILE, mo)
-#define __sys_open_cp2(x,pn,fl) __syscall_cp2(SYS_open, pn, (fl)|O_LARGEFILE)
-#define __sys_open_cp3(x,pn,fl,mo) __syscall_cp3(SYS_open, pn, (fl)|O_LARGEFILE, mo)
+#define __sys_open2(x,pn,fl) __syscall2(OE_R_SYS_open, pn, (fl)|O_LARGEFILE)
+#define __sys_open3(x,pn,fl,mo) __syscall3(OE_R_SYS_open, pn, (fl)|O_LARGEFILE, mo)
+#define __sys_open_cp2(x,pn,fl) __syscall_cp2(OE_R_SYS_open, pn, (fl)|O_LARGEFILE)
+#define __sys_open_cp3(x,pn,fl,mo) __syscall_cp3(OE_R_SYS_open, pn, (fl)|O_LARGEFILE, mo)
 #else
-#define __sys_open2(x,pn,fl) __syscall3(SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE)
-#define __sys_open3(x,pn,fl,mo) __syscall4(SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE, mo)
-#define __sys_open_cp2(x,pn,fl) __syscall_cp3(SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE)
-#define __sys_open_cp3(x,pn,fl,mo) __syscall_cp4(SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE, mo)
+#define __sys_open2(x,pn,fl) __syscall3(OE_R_SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE)
+#define __sys_open3(x,pn,fl,mo) __syscall4(OE_R_SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE, mo)
+#define __sys_open_cp2(x,pn,fl) __syscall_cp3(OE_R_SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE)
+#define __sys_open_cp3(x,pn,fl,mo) __syscall_cp4(OE_R_SYS_openat, AT_FDCWD, pn, (fl)|O_LARGEFILE, mo)
 #endif
 
-#define __sys_open(...) __SYSCALL_DISP(__sys_open,,__VA_ARGS__)
+#define __sys_open(...) __SYSCALL_DISP(__sys_open,, __VA_ARGS__)
 #define sys_open(...) __syscall_ret(__sys_open(__VA_ARGS__))
 
 #define __sys_open_cp(...) __SYSCALL_DISP(__sys_open_cp,,__VA_ARGS__)
