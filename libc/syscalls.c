@@ -29,21 +29,32 @@ static const uint64_t _SEC_TO_MSEC = 1000UL;
 static const uint64_t _MSEC_TO_USEC = 1000UL;
 static const uint64_t _MSEC_TO_NSEC = 1000000UL;
 
-static long _syscall_mmap(long n, ...)
+OE_DECLARE_SYSCALL6(SYS_mmap)
 {
     /* Always fail */
-    OE_UNUSED(n);
+    OE_UNUSED(arg1 + arg2 + arg3 + arg4 + arg5 + arg6);
+
     return EPERM;
 }
 
-static long _syscall_clock_gettime(long n, long x1, long x2)
+OE_DEFINE_SYSCALL2(SYS_munmap)
 {
-    clockid_t clk_id = (clockid_t)x1;
-    struct timespec* tp = (struct timespec*)x2;
+    OE_UNUSED(arg1 + arg2);
+    return EPERM;
+}
+
+long OE_SYSCALL_NAME(_SYS_futex)(long arg1, long arg2, long arg3, ...)
+{
+    OE_UNUSED(arg1 + arg2 + arg3);
+    return -1;
+}
+
+OE_DEFINE_SYSCALL2(SYS_clock_gettime)
+{
+    clockid_t clk_id = (clockid_t)arg1;
+    struct timespec* tp = (struct timespec*)arg2;
     int ret = -1;
     uint64_t msec;
-
-    OE_UNUSED(n);
 
     if (!tp)
         goto done;
@@ -68,14 +79,12 @@ done:
     return ret;
 }
 
-static long _syscall_gettimeofday(long n, long x1, long x2)
+OE_DEFINE_SYSCALL2(SYS_gettimeofday)
 {
-    struct timeval* tv = (struct timeval*)x1;
-    void* tz = (void*)x2;
+    struct timeval* tv = (struct timeval*)arg1;
+    void* tz = (void*)arg2;
     int ret = -1;
     uint64_t msec;
-
-    OE_UNUSED(n);
 
     if (tv)
         memset(tv, 0, sizeof(struct timeval));
@@ -211,12 +220,9 @@ long __syscall(long n, long x1, long x2, long x3, long x4, long x5, long x6)
     /* Handle syscall internally if possible. */
     switch (n)
     {
-        case SYS_gettimeofday:
-            return _syscall_gettimeofday(n, x1, x2);
-        case SYS_clock_gettime:
-            return _syscall_clock_gettime(n, x1, x2);
-        case SYS_mmap:
-            return _syscall_mmap(n, x1, x2, x3, x4, x5, x6);
+        OE_SYSCALL_DISPATCH(SYS_gettimeofday, x1, x2);
+        OE_SYSCALL_DISPATCH(SYS_clock_gettime, x1, x2);
+        OE_SYSCALL_DISPATCH(SYS_mmap, x1, x2, x3, x4, x5, x6);
         default:
             /* Drop through and let the code below handle the syscall. */
             break;

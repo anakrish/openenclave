@@ -21,6 +21,8 @@
 
 OE_EXTERNC_BEGIN
 
+long oe_register_syscall(long idx, void* syscall_impl);
+
 #define OE_SYSCALL_NAME(idx) oe##idx##_impl
 #define OE_CHECK_IDX(idx) OE_STATIC_ASSERT((idx + 1) > 0)
 
@@ -36,6 +38,8 @@ OE_EXTERNC_BEGIN
 #define OE_SYSCALL_ARGS5 OE_SYSCALL_ARGS4, long arg5
 #define OE_SYSCALL_ARGS6 OE_SYSCALL_ARGS5, long arg6
 #define OE_SYSCALL_ARGS7 OE_SYSCALL_ARGS6, long arg7
+
+#define OE_SYSCALL_IDX_NAME(idx) oe##idx##_index
 
 #define OE_DECLARE_SYSCALL0(idx)       \
     OE_STATIC_ASSERT(idx == OE_##idx); \
@@ -81,6 +85,7 @@ OE_DECLARE_SYSCALL2(SYS_access);
 #endif
 OE_DECLARE_SYSCALL3(SYS_bind);
 OE_DECLARE_SYSCALL1(SYS_chdir);
+OE_DECLARE_SYSCALL2(SYS_clock_gettime);
 OE_DECLARE_SYSCALL1(SYS_close);
 OE_DECLARE_SYSCALL3(SYS_connect);
 #if defined(OE_SYS_creat)
@@ -109,6 +114,7 @@ OE_DECLARE_SYSCALL2(SYS_flock);
 OE_DECLARE_SYSCALL2(SYS_fstat);
 OE_DECLARE_SYSCALL1(SYS_fsync);
 OE_DECLARE_SYSCALL2(SYS_getcwd);
+OE_DECLARE_SYSCALL3(SYS_getdents);
 OE_DECLARE_SYSCALL3(SYS_getdents64);
 OE_DECLARE_SYSCALL0(SYS_getegid);
 OE_DECLARE_SYSCALL0(SYS_geteuid);
@@ -123,6 +129,7 @@ OE_DECLARE_SYSCALL0(SYS_getpid);
 OE_DECLARE_SYSCALL0(SYS_getppid);
 OE_DECLARE_SYSCALL3(SYS_getsockname);
 OE_DECLARE_SYSCALL5(SYS_getsockopt);
+OE_DECLARE_SYSCALL2(SYS_gettimeofday);
 OE_DECLARE_SYSCALL0(SYS_getuid);
 OE_DECLARE_SYSCALL6(SYS_ioctl);
 #if defined(OE_SYS_link)
@@ -175,6 +182,20 @@ OE_DECLARE_SYSCALL1(SYS_unlink);
 #endif
 OE_DECLARE_SYSCALL3(SYS_unlinkat);
 OE_DECLARE_SYSCALL2(SYS_umount2);
+
+// These syscalls are not impelemented but are needed for compilation.
+// Their use ought to be removed.
+// Futex is special, can be called with 3 or 4 arguments
+// OE_DECLARE_SYSCALL4(SYS_futex);
+long OE_SYSCALL_NAME(_SYS_futex)(long arg1, long arg2, long arg3, ...);
+OE_DECLARE_SYSCALL6(SYS_mmap);
+OE_DECLARE_SYSCALL2(SYS_munmap);
+
+// These don't seem to be used.
+long OE_SYSCALL_NAME(_SYS_pread)(long arg1, long arg2, long arg3, long arg4);
+long OE_SYSCALL_NAME(_SYS_pwrite)(long arg1, long arg2, long arg3, long arg4);
+
+OE_DECLARE_SYSCALL4(SYS_wait4);
 
 OE_EXTERNC_END
 

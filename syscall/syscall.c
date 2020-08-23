@@ -301,6 +301,11 @@ OE_DEFINE_SYSCALL2(SYS_getcwd)
     return ret;
 }
 
+OE_DEFINE_SYSCALL3(SYS_getdents)
+{
+    return OE_SYSCALL_NAME(_SYS_getdents64)(arg1, arg2, arg3);
+}
+
 OE_DEFINE_SYSCALL3(SYS_getdents64)
 {
     oe_errno = 0;
@@ -652,6 +657,11 @@ done:
     return ret;
 }
 
+long OE_SYSCALL_NAME(_SYS_pread)(long arg1, long arg2, long arg3, long arg4)
+{
+    return OE_SYSCALL_NAME(_SYS_pread64)(arg1, arg2, arg3, arg4);
+}
+
 OE_DEFINE_SYSCALL4(SYS_pread64)
 {
     oe_errno = 0;
@@ -682,6 +692,11 @@ OE_DEFINE_SYSCALL5(SYS_pselect6)
     }
 
     return oe_select(nfds, readfds, writefds, exceptfds, tv);
+}
+
+long OE_SYSCALL_NAME(_SYS_pwrite)(long arg1, long arg2, long arg3, long arg4)
+{
+    return OE_SYSCALL_NAME(_SYS_pwrite64)(arg1, arg2, arg3, arg4);
 }
 
 OE_DEFINE_SYSCALL4(SYS_pwrite64)
@@ -961,6 +976,7 @@ OE_DEFINE_SYSCALL2(SYS_umount2)
     return oe_umount(target);
 }
 
+#if 0
 static long _syscall(
     long num,
     long arg1,
@@ -1069,6 +1085,42 @@ static long _syscall(
     oe_errno = OE_ENOSYS;
     OE_TRACE_WARNING("syscall num=%ld not handled", num);
     return -1;
+}
+#endif
+
+static void* _syscall_table[400];
+
+long oe_register_syscall(long idx, void* fcn)
+{
+    if ((uint64_t)idx >= OE_COUNTOF(_syscall_table))
+        oe_abort();
+    _syscall_table[idx] = fcn;
+    return 0;
+}
+
+static long _syscall(
+    long num,
+    long arg1,
+    long arg2,
+    long arg3,
+    long arg4,
+    long arg5,
+    long arg6)
+{
+    void* fcn = ((uint64_t)num < OE_COUNTOF(_syscall_table))
+                    ? _syscall_table[num]
+                    : NULL;
+    if (fcn)
+    {
+        return ((long (*)(long, long, long, long, long, long))fcn)(
+            arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+    else
+    {
+        oe_errno = OE_ENOSYS;
+        OE_TRACE_WARNING("syscall num=%ld not handled", num);
+        return -1;
+    }
 }
 
 long oe_syscall(long number, ...)
