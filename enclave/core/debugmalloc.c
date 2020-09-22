@@ -15,7 +15,9 @@
 #include <openenclave/internal/types.h>
 #include <openenclave/internal/utils.h>
 
-#if defined(OE_USE_DEBUG_MALLOC)
+/* Flags to control runtime behavior. */
+bool oe_use_debug_malloc = true;
+bool oe_use_debug_malloc_memset = true;
 
 /*
 **==============================================================================
@@ -474,4 +476,138 @@ size_t oe_debug_malloc_check(void)
     return count;
 }
 
-#endif /* defined(OE_USE_DEBUG_MALLOC) */
+/* If true, disable the debug malloc checking */
+bool oe_disable_debug_malloc_check;
+
+static oe_allocation_failure_callback_t _failure_callback;
+
+void oe_set_allocation_failure_callback(
+    oe_allocation_failure_callback_t function)
+{
+    _failure_callback = function;
+}
+
+void* oe_malloc(size_t size)
+{
+    void* p = NULL;
+    if (oe_use_debug_malloc)
+    {
+        p = oe_debug_malloc(size);
+    }
+    else
+    {
+        p = oe_allocator_malloc(size);
+    }
+
+    if (!p && size)
+    {
+        if (_failure_callback)
+            _failure_callback(__FILE__, __LINE__, __FUNCTION__, size);
+    }
+
+    return p;
+}
+
+void oe_free(void* ptr)
+{
+    if (oe_use_debug_malloc)
+    {
+        oe_debug_free(ptr);
+    }
+    else
+    {
+        oe_allocator_free(ptr);
+    }
+}
+
+void* oe_calloc(size_t nmemb, size_t size)
+{
+    void* p = NULL;
+    if (oe_use_debug_malloc)
+    {
+        p = oe_debug_calloc(nmemb, size);
+    }
+    else
+    {
+        p = oe_allocator_calloc(nmemb, size);
+    }
+
+    if (!p && nmemb && size)
+    {
+        if (_failure_callback)
+            _failure_callback(__FILE__, __LINE__, __FUNCTION__, nmemb * size);
+    }
+
+    return p;
+}
+
+void* oe_realloc(void* ptr, size_t size)
+{
+    void* p = NULL;
+    if (oe_use_debug_malloc)
+    {
+        p = oe_debug_realloc(ptr, size);
+    }
+    else
+    {
+        p = oe_allocator_realloc(ptr, size);
+    }
+
+    if (!p && size)
+    {
+        if (_failure_callback)
+            _failure_callback(__FILE__, __LINE__, __FUNCTION__, size);
+    }
+
+    return p;
+}
+
+void* oe_memalign(size_t alignment, size_t size)
+{
+    void* ptr = NULL;
+
+    // The only difference between posix_memalign and the obsolete memalign is
+    // that posix_memalign requires alignment to be a multiple of sizeof(void*).
+    // Adjust the alignment if needed.
+    alignment = oe_round_up_to_multiple(alignment, sizeof(void*));
+
+    oe_posix_memalign(&ptr, alignment, size);
+    return ptr;
+}
+
+int oe_posix_memalign(void** memptr, size_t alignment, size_t size)
+{
+    int rc = -1;
+
+    if (oe_use_debug_malloc)
+        rc = oe_debug_posix_memalign(memptr, alignment, size);
+    else
+        rc = oe_posix_memalign(memptr, alignment, size);
+
+    if (rc != 0 && size)
+    {
+        if (_failure_callback)
+            _failure_callback(__FILE__, __LINE__, __FUNCTION__, size);
+    }
+
+    return rc;
+}
+
+size_t oe_malloc_usable_size(void* ptr)
+{
+    if (oe_use_debug_malloc)
+    {
+        return oe_debug_malloc_usable_size(ptr);
+    }
+    else
+    {
+        return oe_allocator_malloc_usable_size(ptr);
+    }
+}
+
+oe_result_t oe_check_memory_leaks(void)
+{
+    if (!oe_disable_debug_malloc_check && oe_debug_malloc_check() != 0)
+        return OE_MEMORY_LEAK;
+    return OE_OK;
+}
