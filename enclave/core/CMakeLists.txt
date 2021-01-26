@@ -56,30 +56,32 @@ if (OE_SGX)
     ${MUSL_SRC_DIR}/string/x86_64/memset.s
     ../../common/sgx/endorsements.c
     ../../common/sgx/rand.S
+    sgx/enter.S
+    sgx/exit.S
+    sgx/getkey.S
+    sgx/longjmp.S
+    sgx/setjmp.S
+    sgx/properties.c)
+    
+  make_group(SGX_FILES
     ../../common/sgx/cpuid.c
     sgx/arena.c
     sgx/asmdefs.c
     sgx/backtrace.c
     sgx/calls.c
     sgx/cpuid.c
-    sgx/enter.S
     sgx/entropy.c
     sgx/errno.c
     sgx/exception.c
-    sgx/exit.S
-    sgx/getkey.S
     sgx/globals.c
     sgx/hostcalls.c
     sgx/init.c
     sgx/keys.c
-    sgx/longjmp.S
     sgx/memory.c
-    sgx/properties.c
     sgx/random_internal.c
     sgx/reloc.c
     sgx/report.c
     sgx/sched_yield.c
-    sgx/setjmp.S
     sgx/spinlock.c
     sgx/switchlesscalls.c
     sgx/td.c
@@ -88,6 +90,8 @@ if (OE_SGX)
     sgx/threadlocal.c
     sgx/tracee.c
     sgx/xstate.c)
+
+  list(APPEND PLATFORM_SRC ${SGX_FILES})
 
   # Functions in td_basic.c will change the status of td and may trigger
   # stack check fail, thus it is necessary to turn off stack check.
@@ -150,36 +154,39 @@ else ()
   set(DEFAULT_ALLOCATOR_LIB oedlmalloc_obj)
 endif ()
 
+make_group(CORE_FILES
+  ../../common/safecrt.c
+  ../../common/argv.c
+ assert.c
+ atexit.c
+ backtrace.c
+ ctype.c
+ gmtime.c
+ hexdump.c
+ hostcalls.c
+ intstr.c
+ once.c
+ printf.c
+ pthread.c
+ random.c
+ result.c
+ stdio.c
+ time.c
+ tracee.c)
+  
 add_enclave_library(
   oecore
   STATIC
-  ../../common/safecrt.c
-  ../../common/argv.c
   ${MUSL_SRC_DIR}/prng/rand.c
   ${MUSL_SRC_DIR}/string/memcmp.c
   __stack_chk_fail.c
-  assert.c
-  atexit.c
-  backtrace.c
-  ctype.c
-  gmtime.c
-  hexdump.c
-  hostcalls.c
-  intstr.c
   malloc.c
-  once.c
-  printf.c
-  pthread.c
-  random.c
-  result.c
-  stdio.c
   strerror.c
   string.c
   strtok_r.c
   strtoul.c
-  time.c
-  tracee.c
   wchar.c
+  ${CORE_FILES}
   ${PLATFORM_SRC})
 
 # Some files in oecore come directly from the musl source. For these files,

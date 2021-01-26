@@ -244,6 +244,9 @@ else ()
 
 endif ()
 
+# Group building
+include(make_group)
+
 # See `cmake/enclave_cmake_wrappers.cmake` for wrapper functions.
 include(enclave_cmake_wrappers)
 
