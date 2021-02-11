@@ -111,7 +111,6 @@ class oe_debug_module_t:
     def is_valid(self):
         return self.magic == self.MAGIC_VALUE
 
-
 # This constant definition must align with sgx_tcs_t
 TCS_GSBASE_OFFSET =  56
 

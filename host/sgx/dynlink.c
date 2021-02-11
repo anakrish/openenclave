@@ -123,7 +123,7 @@ static oe_result_t _read_sections(int fd, dso_t* dso, elf64_ehdr_t* ehdr)
      * */
     if (!has_build_id)
     {
-        OE_TRACE_ERROR("Enclave image does not have build-id.");
+        OE_TRACE_WARNING("Enclave image does not have build-id.");
     }
     result = OE_OK;
 
@@ -535,14 +535,20 @@ done:
 oe_result_t oe_load_deps(oe_dso_load_state_t* load_state, dso_t* p)
 {
     oe_result_t result = OE_UNEXPECTED;
+    const char* name = NULL;
     for (; p; p = p->next)
     {
         for (size_t i = 0; p->dynv[i]; i += 2)
         {
             if (p->dynv[i] != DT_NEEDED)
                 continue;
+	    name = p->strings + p->dynv[i + 1];
+	    // For now, skip ld-musl-x86-64.so.1
+	    // Somehow it appears as libc.musl-x86_64.so.1
+	    if (strcmp(name, "libc.musl-x86_64.so.1") == 0)
+	    	continue;
             OE_CHECK(oe_load_enclave_dso(
-                p->strings + p->dynv[i + 1], load_state, p, NULL));
+                name, load_state, p, NULL));
         }
     }
     result = OE_OK;
@@ -584,3 +590,7 @@ size_t oe_get_dso_segments_size(dso_t* dso)
         size += dso->map_len;
     return size;
 }
+
+
+void pthread_setcancelstate(void);
+void pthread_setcancelstate(void){}

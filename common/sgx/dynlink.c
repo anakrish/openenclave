@@ -149,7 +149,11 @@ symdef_t find_sym(dso_t* dso, const char* s, int need_def)
 {
     uint32_t h = 0, gh = gnu_hash(s), gho = gh / (8 * sizeof(size_t)), *ght;
     size_t ghm = 1ul << gh % (8 * sizeof(size_t));
-    symdef_t def = {0};
+    // def = {0} generates a call to memset
+    // That call may crash since memset's PLT may not have been relocated yet.
+    symdef_t def;
+    def.sym = NULL;
+    def.dso = NULL;
     for (; dso; dso = dso->syms_next)
     {
         elf64_sym_t* sym;

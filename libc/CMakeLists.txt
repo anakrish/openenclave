@@ -21,10 +21,7 @@ if (OE_SGX)
     ${MUSLSRC}/math/x86_64/sqrtl.s
     ${MUSLSRC}/math/x86_64/sqrtf.s
     ${MUSLSRC}/setjmp/x86_64/longjmp.s
-    ${MUSLSRC}/setjmp/x86_64/setjmp.s
-    ${MUSLSRC}/string/x86_64/memcpy.s
-    ${MUSLSRC}/string/x86_64/memmove.s
-    ${MUSLSRC}/string/x86_64/memset.s)
+    ${MUSLSRC}/setjmp/x86_64/setjmp.s)
 elseif (OE_TRUSTZONE)
   add_enclave_library(
     oelibasm
@@ -56,17 +53,14 @@ else ()
     APPEND
     PLATFORM_SRC
     ${MUSLSRC}/math/exp2l.c
-    ${MUSLSRC}/string/memcpy.c
-    ${MUSLSRC}/string/memmove.c
-    ${MUSLSRC}/string/memset.c
     optee/abort.c
     optee/arc4random.c
     optee/trace.c)
 endif ()
 
-add_enclave_library(
-  oelibc
-  STATIC
+
+list(APPEND
+  LIBC_SOURCES
   atexit.c
   backtrace.c
   dladdr.c
@@ -689,7 +683,6 @@ add_enclave_library(
   ${MUSLSRC}/string/index.c
   ${MUSLSRC}/string/memccpy.c
   ${MUSLSRC}/string/memchr.c
-  ${MUSLSRC}/string/memcmp.c
   ${MUSLSRC}/string/memmem.c
   ${MUSLSRC}/string/mempcpy.c
   ${MUSLSRC}/string/memrchr.c
@@ -811,13 +804,32 @@ add_enclave_library(
   ${MUSLSRC}/unistd/usleep.c
   ${PLATFORM_SRC})
 
+# Free standing enviroment
+list(APPEND
+  LIBC_SOURCES
+  ${MUSLSRC}/string/memcmp.c       
+  ${MUSLSRC}/string/memcpy.c
+  ${MUSLSRC}/string/memmove.c
+  ${MUSLSRC}/string/memset.c)
+
+add_enclave_library(
+  oelibc
+  STATIC
+  ${LIBC_SOURCES})
+
 maybe_build_using_clangw(oelibc)
 
 # NOTE: This is the minimum required for musl sources.
 set_property(TARGET oelibc PROPERTY C_STANDARD 99)
 
 enclave_compile_options(oelibc PRIVATE -fno-builtin-memcpy -fno-builtin-memset
-                        -ffreestanding)
+                        -ffreestanding -fvisibility=default)
+
+set_source_files_properties(
+  ${LIBC_SOURCES}
+  PROPERTIES
+  COMPILE_FLAGS " -fvisibility=default "
+)
 
 if (OE_SGX)
   enclave_compile_options(oelibc PRIVATE -mrdrnd)
@@ -893,6 +905,16 @@ if (CODE_COVERAGE)
   # Link against libgcov.
   enclave_link_libraries(oelibc PRIVATE gcov)
 endif ()
+
+# Doesn't work due to linker flags order
+# enclave_compile_options(oelibc PRIVATE -fvisibility=default)
+set_property(
+  SOURCE
+  ${MUSLSRC}/stdlib/qsort.c  
+  APPEND_STRING PROPERTY COMPILE_FLAGS
+  " -fvisibility=default "
+)
+
 
 # This project (and its dependents) require the enclave headers and
 # library, and the musl headers.

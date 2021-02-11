@@ -21,6 +21,9 @@ static inline uint64_t oe_rva_to_addr(uint64_t rva, uint64_t base)
     return (rva == OE_UINT64_MAX) ? 0 : (rva + base);
 }
 
+static char missing_functions[5 * 1024];
+char* _p = missing_functions;
+
 static void do_relocs(dso_t* dso, size_t* rel, size_t rel_size, size_t stride)
 {
     unsigned char* base = dso->base;
@@ -79,7 +82,14 @@ static void do_relocs(dso_t* dso, size_t* rel, size_t rel_size, size_t stride)
                 /* OE does not support lazy binding, and all enclaves
                  * should be linked with BIND_NOW, so abort the enclave
                  * if the symbol is not already loaded */
-                oe_abort();
+                const char* s = name;
+		char* _p = missing_functions;
+		while (*_p) ++_p;
+		while (*s)
+		    *_p++ = *s++;
+		*_p++ = '\n';
+		continue;
+//		oe_abort();
             }
         }
         else
@@ -142,23 +152,27 @@ static void do_relocs(dso_t* dso, size_t* rel, size_t rel_size, size_t stride)
     }
 }
 
+static void _reloc_recursive(dso_t* p, size_t* dyn)
+{
+    if (p->next)
+	_reloc_recursive(p->next, dyn);
+    if (p->relocated)
+        return;
+    decode_vec(p->dynv, dyn, DYN_CNT);
+    do_relocs(
+	p,
+	(size_t*)laddr(p, dyn[DT_JMPREL]),
+	dyn[DT_PLTRELSZ],
+	2 + (dyn[DT_PLTREL] == DT_RELA));
+    do_relocs(p, (size_t*)laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
+    do_relocs(p, (size_t*)laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
+    p->relocated = 1;
+}
+
 static void _reloc_all(dso_t* p)
 {
     size_t dyn[DYN_CNT];
-    for (; p; p = p->next)
-    {
-        if (p->relocated)
-            continue;
-        decode_vec(p->dynv, dyn, DYN_CNT);
-        do_relocs(
-            p,
-            (size_t*)laddr(p, dyn[DT_JMPREL]),
-            dyn[DT_PLTRELSZ],
-            2 + (dyn[DT_PLTREL] == DT_RELA));
-        do_relocs(p, (size_t*)laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
-        do_relocs(p, (size_t*)laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
-        p->relocated = 1;
-    }
+    _reloc_recursive(p, dyn);
 }
 
 /*
