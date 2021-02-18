@@ -28,7 +28,9 @@ add_enclave(
 
 enclave_include_directories(ldd_enc PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 enclave_link_libraries(ldd_enc
-  ~/work/symcrypt/libsymcrypt.so
+  ${CMAKE_CURRENT_SOURCE_DIR}/libsymcrypt.so
   oelibc
   ldd_enc_dep_1a
   ldd_enc_dep_1b)
+
+configure_file(libsymcrypt.so libsymcrypt.so COPYONLY)
