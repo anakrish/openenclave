@@ -35,105 +35,12 @@ void test_SymCrypt(void)
 {
     uint8_t data[4 * 1024];
 
-    //SymCryptInit();
+    SymCryptInit();
     printf("Initialized symcrypt\n");
     
     oe_random(data, sizeof(data));
 
     printf("Symcrypt test passed\n");
-}
-
-void OPENSSL_init_crypto(void);
-
-void my_foo(void);
-
-static int callback(void *data, int argc, char **argv, char **azColName){
-    int i;
-    fprintf(stderr, "%s: ", (const char*)data);
-   
-    for(i = 0; i<argc; i++){
-	printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-    }
-   
-    printf("\n");
-    return 0;
-}
-
-OE_EXPORT
-void* dlopen(const char* name, ...)
-{
-    OE_UNUSED(name);
-    return 0;
-}
-
-void* TestAlpineLibs()
-{
-    extern double sin(double);
-    static void* libcfcns[] = { 
-	sin,
-//	 strcspn,
-//	 strstr,
-    }; 
-
-    //OPENSSL_init_crypto();
-    my_foo();
-    {
-	typedef void* sqllite3;
-	extern int sqlite3_open(const char*, sqllite3** db);
-	extern int sqlite3_close(sqllite3* db);
-	extern int sqlite3_exec(sqllite3* db, const char* cmd, void* callback,
-				void* data, char** err);
-	sqllite3* db = NULL;
-	int rc= sqlite3_open(":memory:", &db);
-	char* zErrMsg = NULL;
-
-	printf("sqllite3_open returned %d\n", rc);
-
-	const char*  sql = "CREATE TABLE COMPANY("  \
-	    "ID INT PRIMARY KEY     NOT NULL," \
-	    "NAME           TEXT    NOT NULL," \
-	    "AGE            INT     NOT NULL," \
-	    "ADDRESS        CHAR(50)," \
-	    "SALARY         REAL );";	
-        rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-	if (rc!=0)
-	    printf("sqllite3_exec returned %s", zErrMsg);
-	else
-	    printf("sqllite3_exec executed successfully!\n");
-	/* Create SQL statement */
-	sql = "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-	    "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
-	    "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-	    "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
-	    "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-	    "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
-	    "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-	    "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );";
-
-	/* Execute SQL statement */
-	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-	if (rc!=0)
-	    printf("sqllite3_exec returned %s", zErrMsg);
-	else
-	    printf("sqllite3_exec executed successfully!\n");
- 
-	/* Create SQL statement */
-	sql = "SELECT * from COMPANY";
-
-	/* Execute SQL statement */
-	const char* data = "Callback function called";
-	rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
-	if (rc!=0)
-	    printf("sqllite3_exec returned %s", zErrMsg);
-	else
-	    printf("sqllite3_exec executed successfully!\n");
-	
-        if (db)
-	{
-	    sqlite3_close(db);
-	}
-    }
-    return libcfcns;
 }
 
 int multiply_local_const_1a(int a);
@@ -244,8 +151,7 @@ int test_enclave()
     else
         printf("unlinked_function is correctly not found\n");
 
-    //test_SymCrypt();
-    TestAlpineLibs();
+    test_SymCrypt();
     return failed_tests;
 }
 
