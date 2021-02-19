@@ -309,6 +309,9 @@ def oe_debugger_init():
     oe_debugger_cleanup()
     EnclaveCreationBreakpoint()
     EnclaveTerminationBreakpoint()
+
+    # Enable debugging libraries built using apkman
+    gdb.execute("set substitute-path /apkbuild ~/.apkman/alpine-fs/apkbuild")
     return
 
 def oe_debugger_cleanup():

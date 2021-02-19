@@ -1915,6 +1915,11 @@ oe_result_t elf64_load_relocations(
         if (reloc_type != R_X86_64_RELATIVE && reloc_type != R_X86_64_TPOFF64 &&
             reloc_type != R_X86_64_GLOB_DAT)
         {
+            // Ignore undefined relocations.
+            // Provide an elegant workflow for the user to
+            // understand these.
+            continue;
+
             // Relocations are critical for correct code behavior.
             // Error out for unsupported relocations
             OE_RAISE_MSG(

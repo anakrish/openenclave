@@ -22,6 +22,8 @@ if (OE_SGX)
     ${MUSLSRC}/math/x86_64/sqrtf.s
     ${MUSLSRC}/setjmp/x86_64/longjmp.s
     ${MUSLSRC}/setjmp/x86_64/setjmp.s
+#    ${MUSLSRC}/signal/x86_64/sigsetjmp.s
+#    ${MUSLSRC}/signal/x86_64/siglongjmp.s
     ${MUSLSRC}/string/x86_64/memcpy.s
     ${MUSLSRC}/string/x86_64/memmove.s
     ${MUSLSRC}/string/x86_64/memset.s)

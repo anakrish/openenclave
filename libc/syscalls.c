@@ -55,8 +55,8 @@ OE_DEFINE_SYSCALL2(SYS_clock_gettime)
     if (clock_id != CLOCK_REALTIME)
     {
         /* Only supporting CLOCK_REALTIME */
-        oe_assert("clock_gettime(): panic" == NULL);
-        goto done;
+        // oe_assert("clock_gettime(): panic" == NULL);
+        // goto done;
     }
 
     if ((msec = oe_get_time()) == (uint64_t)-1)

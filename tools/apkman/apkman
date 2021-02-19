@@ -1,0 +1,272 @@
+
+#!/bin/sh
+
+# URL to fetch alpine root fs from About 2.5 MB download.
+ALPINE_ROOTFS_URL="https://dl-cdn.alpinelinux.org/alpine/v3.13/\
+releases/x86_64/alpine-minirootfs-3.13.1-x86_64.tar.gz"
+
+# Use a recent version of proot. With older versions, apk would
+# report messages like "2 errors", that are innocuous, but catch
+# the eye.
+PROOT_URL="https://gitlab.com/proot/proot/-/jobs/981080842/\
+artifacts/download?file_type=archive"
+
+# Name of the folder where root filesystem will be extracted to.
+ALPINE_FS="alpine-fs"
+
+APORTS_BRANCH=3.13-stable
+
+BUILDER=user
+
+# Figure out the user's home folder. If the command is executed
+# as sudo, then we use $SUDO_USER's home folder and not the
+# root's home folder.
+if [ ! -z "$SUDO_USER" ]; then
+  HOME_DIR=/home/${SUDO_USER}
+else
+  HOME_DIR=~
+fi
+
+APKMAN_DIR=${HOME_DIR}/.apkman
+CURRENT_DIR=`pwd`
+
+print_usage()
+{
+  usage="\
+
+  "
+}
+
+ensure_apkman_dir()
+{
+   mkdir -p "$APKMAN_DIR" && cd "$APKMAN_DIR"
+   if [ ! -z "$SUDO_USER" ]; then
+     chown $SUDO_USER:$SUDO_USER $APKMAN_DIR
+   fi
+}
+
+ensure_dependencies()
+{
+   BINS="tar unzip wget"
+   for bin in $BINS; do
+     if ! command -v "$bin" > /dev/null; then
+       echo "${bin} not found. Install [${BINS}] to proceed."
+       exit 1
+     fi
+   done
+
+   export PATH=./dist:$PATH
+   if ! command -v dist/proot > /dev/null; then
+     wget "${PROOT_URL}" -O proot.zip
+     unzip proot.zip
+   fi
+}
+
+enter_chroot()
+{
+    mount --bind /dev     "${ALPINE_FS}/dev"
+    mount --bind /dev/pts "${ALPINE_FS}/dev/pts"
+    mount --bind /dev/shm "${ALPINE_FS}/dev/shm"
+    mount --bind /proc    "${ALPINE_FS}/proc"
+    mount --bind /sys     "${ALPINE_FS}/sys"
+    sudo chroot "${ALPINE_FS}" /bin/sh
+    umount --recursive "${ALPINE_FS}/dev"
+    umount --recursive "${ALPINE_FS}/proc"
+    umount --recursive "${ALPINE_FS}/sys"
+}
+
+proot_exec()
+{
+  export SHELL=/bin/sh
+  export TERM=xterm-256color
+  export PS1="apkman \w) "
+  proot -b /dev -b /dev/pts -b /proc -b /sys -b /dev/shm \
+        -0 \
+        -r alpine-fs \
+        -w / \
+        "$@"
+}
+
+setup_alpine_fs()
+{
+  if ! test -d "${ALPINE_FS}"; then
+    wget "$ALPINE_ROOTFS_URL" -O alpine-minirootfs.tar.gz
+    sh -c "mkdir -p tmp && cd tmp && tar xf ../alpine-minirootfs.tar.gz"
+    cp /etc/resolv.conf tmp/etc/resolv.conf
+    mv tmp "${ALPINE_FS}"
+    proot_exec sh -c "apk update && apk add shadow bash neofetch"
+  fi
+}
+
+if [ ! -z "$SUDO_USER" ]; then
+    case "$1" in
+        chroot )
+            USER=$SUDO_USER
+            unset SUDO_USER
+            runuser -u $USER -- $0 init
+            cd $APKMAN_DIR
+            enter_chroot
+            ;;
+
+        *)
+    esac
+    exit 0
+fi
+
+ensure_apkman_dir
+ensure_dependencies
+setup_alpine_fs
+
+ensure_apkbuild_prereqs()
+{
+    PREREQS_CMD="
+mkdir -p /apkbuild && cd /apkbuild
+
+if ! test -f packages.done; then
+  echo \"Installing apkbuild prerequisites\"
+  apk add git runuser build-base alpine-sdk clang gdb && touch packages.done
+fi
+
+if ! test -f keygen.done; then
+  abuild-keygen -an && touch keygen.done
+fi
+
+if ! test -f git.config.done; then
+  echo \"Configuring git\"
+  git config --global user.name \"enclave developer\" && \\
+  git config --global user.email \"enclave-dev@unknown.com\" && \\
+  touch git.config.done
+fi
+
+if ! test -f git.clone.done; then
+  echo \"Cloning repo\"
+  git clone --depth 1 --branch ${APORTS_BRANCH} git://git.alpinelinux.org/aports && \\
+  touch git.clone.done
+fi
+"
+   proot_exec sh -c "$PREREQS_CMD"
+}
+
+abuild_prepare()
+{
+    FLAGS=" -mspeculative-load-hardening -fpic -g -Og -fno-omit-frame-pointer"
+    /bin/cat <<EOM >${ALPINE_FS}/apkbuild/prepare.sh
+export CC=clang
+export CXX=clang++
+export CFLAGS="$FLAGS"
+export CXXFLAGS="$FLAGS"
+cd /apkbuild/aports/main/\$1
+abuild -F checksum
+abuild -F deps
+abuild -F unpack
+abuild -F prepare
+EOM
+    proot_exec sh /apkbuild/prepare.sh "$1"
+}
+abuild_build()
+{
+    FLAGS=" -mspeculative-load-hardening -fpic -g -Og -fno-omit-frame-pointer"
+    /bin/cat <<EOM >${ALPINE_FS}/apkbuild/build.sh
+export CC=clang
+export CXX=clang++
+export CFLAGS="$FLAGS"
+export CXXFLAGS="$FLAGS"
+cd /apkbuild/aports/main/\$1
+abuild -F -K build
+abuild -F -K package
+mkdir -p /apkbuild/pkgs
+cp -r pkg/\$1/* /apkbuild/pkgs
+echo Done!
+EOM
+    proot_exec sh /apkbuild/build.sh "$1"
+}
+
+
+ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
+BUILD_LIB="${ROOTFS_PATH}/apkbuild/pkgs/lib"
+BUILD_USER_LIB="${ROOTFS_PATH}/apkbuild/pkgs/usr/lib"
+USER_LIB="${ROOTFS_PATH}/usr/lib"
+LIB="${ROOTFS_PATH}/lib"
+GCC_LIB="${ROOTFS_PATH}/lib/gcc/x86_64-alpine-linux-musl/10.2.1"
+MUSL_LIB="${ROOTFS_PATH}/usr/x86_64-alpine-linux-musl/lib"
+
+USER_CXX_INCLUDE="${ROOTFS_PATH}/usr/include/c++/10.2.1"
+USER_CXX_MUSL_INCLUDE="${USER_CXX_INCLUDE}/x86_64-alpine-linux-musl"
+USER_INCLUDE="${ROOTFS_PATH}/usr/include"
+BUILD_USER_CXX_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include/c++/10.2.1"
+BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
+
+case "$1" in
+    "chroot")
+        echo "chroot requires sudo"
+        exit 1
+        ;;
+
+    "search")
+        proot_exec apk search $2 | sort
+        ;;
+
+    "add")
+        proot_exec apk add $2
+        ;;
+
+    "del")
+        proot_exec apk del $2
+        ;;
+
+    "shell")
+        proot_exec sh -c "sh"
+        ;;
+
+    "init")
+        ensure_apkman_dir
+        ensure_dependencies
+        setup_alpine_fs
+        ;;
+
+    "build-init")
+        ensure_apkbuild_prereqs
+        ;;
+
+    "prepare")
+        ensure_apkbuild_prereqs
+        abuild_prepare "$2"
+        ;;
+
+    "build")
+        ensure_apkbuild_prereqs
+        abuild_build "$2"
+        ;;
+
+    "-c")
+        shift
+        proot_exec "$@"
+        ;;
+
+    "include-paths"|"-I")
+        ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
+        BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
+        USER_INCLUDE="${ROOTFS_PATH}/usr/include"
+        echo " -I\"${BUILD_USER_INCLUDE}\" -I\"${USER_INCLUDE}\" "
+        ;;
+
+    "include-paths-cmake"|"-IC")
+        ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
+        BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
+        USER_INCLUDE="${ROOTFS_PATH}/usr/include"
+        echo "${BUILD_USER_INCLUDE};${USER_INCLUDE}"
+        ;;
+
+    "cxxinclude-paths-cmake"|"-IC")
+        echo "${BUILD_USER_CXX_INCLUDE};${BUILD_USER_INCLUDE};${USER_CXX_INCLUDE};${USER_CXX_MUSL_INCLUDE};${USER_INCLUDE};"
+        ;;
+
+
+    "lib-paths"|"lib-paths-cmake")
+        echo "-L${USER_LIB} -L{LIB} -L{GCC_LIB} -L{MUSL_LIB} -L${BUILD_USER_LIB} -L${BUILD_LIB}"
+        ;;
+
+    "root")
+        echo "${APKMAN_DIR}/${ALPINE_FS}"
+        ;;
+esac

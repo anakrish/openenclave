@@ -54,11 +54,13 @@ void freelocale(locale_t loc)
     OE_UNUSED(loc);
 }
 
+static char _locale[1024];
 char* setlocale(int category, const char* locale)
 {
     OE_UNUSED(category);
     OE_UNUSED(locale);
-    return NULL;
+    sprintf(_locale, "%s", "en-us");
+    return _locale;
 }
 
 locale_t newlocale(int mask, const char* locale, locale_t loc)

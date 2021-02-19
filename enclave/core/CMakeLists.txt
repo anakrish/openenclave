@@ -311,7 +311,12 @@ if (OE_SGX)
     -nostdlib
     -nodefaultlibs
     -nostartfiles
-    -Wl,--no-undefined,-Bstatic,-Bsymbolic,--export-dynamic,-pie,--build-id
+    -Wl,--no-undefined
+#    -Wl,--unresolved-symbols=ignore-all
+#    -Wl,--warn-unresolved-symbols
+    -Wl,-Bstatic
+    -Bsymbolic
+    -Wl,--export-dynamic,-pie,--build-id
     -Wl,-z,noexecstack
     -Wl,-z,now
     -Wl,-gc-sections)
