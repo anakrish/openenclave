@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 set(EDL_FILE ../demo.edl)
-set(PROTO_FILE ./geometry.proto)
 
 add_custom_command(
   OUTPUT demo_t.h demo_t.c

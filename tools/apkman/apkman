@@ -1,4 +1,3 @@
-
 #!/bin/sh
 
 # URL to fetch alpine root fs from About 2.5 MB download.
