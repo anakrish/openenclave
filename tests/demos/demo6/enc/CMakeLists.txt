@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 set(EDL_FILE ../demo.edl)
-set(PROTO_FILE ./geometry.proto)
 
 add_custom_command(
   OUTPUT demo_t.h demo_t.c
@@ -28,7 +27,7 @@ message("apkman include paths: ${APKMAN_INCLUDE_PATHS}")
 
 add_enclave(
   TARGET
-  demo7_enc
+  demo6_enc
   UUID
   71b0822f-42a3-4543-a97c-ca491f76b82c
   SOURCES
@@ -36,29 +35,36 @@ add_enclave(
   stubs.c
   ${CMAKE_CURRENT_BINARY_DIR}/demo_t.c)
 
-enclave_include_directories(demo7_enc
+enclave_include_directories(demo6_enc
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
   ${APKMAN_INCLUDE_PATHS}
+
+  # For using custom built lua
   #TODO: fetch path via apkman
-  ~/.apkman/alpine-fs/apkbuild/pkgs/usr/include/python3.8/
+  #~/.apkman/alpine-fs/apkbuild/pkgs/usr/include/lua5.3
   )
 
-enclave_compile_options(demo7_enc
+enclave_compile_options(demo6_enc
    PRIVATE
    -Wno-implicit-int-conversion
    -Wno-bitwise-op-parentheses
    -Wno-shift-op-parentheses
    -Wno-shorten-64-to-32
    -Wno-implicit-float-conversion
+   -Wno-sign-conversion
+   -Wno-unused-parameter
+   -Wno-unused-variable
 )
 
 enclave_link_libraries(
-  demo7_enc
+  demo6_enc
   ${APKMAN_LIB_PATHS}
-  libpython3.8.a
+  libevent_core.a
   oelibcxx
   oelibc
+  oehostepoll
   oehostfs
-  -v
+  oehostsock
+  -fuse-ld=lld
   -Wl,--warn-unresolved-symbols)
