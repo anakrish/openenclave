@@ -7,4 +7,4 @@ if (BUILD_ENCLAVES)
   add_subdirectory(enc)
 endif ()
 
-add_enclave_test(tests/demos/demo3 demo3_host demo3_enc)
+add_enclave_test(tests/demos/demo7 demo7_host demo7_enc)

@@ -37,7 +37,7 @@ int main(int argc, const char* argv[])
         oe_put_err("ECALL failed args.result=%d", return_val);
 
     result = oe_terminate_enclave(enclave);
-    OE_TEST(result == OE_OK);
+    OE_TEST(result == OE_OK || result == OE_MEMORY_LEAK);
 
     return 0;
 }

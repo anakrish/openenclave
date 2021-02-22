@@ -312,6 +312,7 @@ def oe_debugger_init():
 
     # Enable debugging libraries built using apkman
     gdb.execute("set substitute-path /apkbuild ~/.apkman/alpine-fs/apkbuild")
+    gdb.execute("set substitute-path /home/buildozer/apports  ~/.apkman/alpine-fs/apkbuild/aports")    
     return
 
 def oe_debugger_cleanup():

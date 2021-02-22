@@ -32,8 +32,84 @@ CURRENT_DIR=`pwd`
 print_usage()
 {
   usage="\
+apkman -  package manager and development environment for enclaves.
+          version 0.1a, alpine-linux 3.13, proot v5.2.0-alpha-8c0ccf7d
 
-  "
+apkman uses \`proot\` to manage multiple user-space installations of alpine-linux.
+Alpine linux exists as a normal directory on the host machine and thus headers
+and libraries can be transparently used to build enclaves on the host machine.
+apkman also sets up the a development environment for fine-tuning and building
+packages specifically for enclaves. Use this development environment if you want
+to use specific a specific compiler (e.g clang) or specific compiler flags 
+(e.g -mspeculative-load-hardening) or want to turn-off certain features 
+(e.g HAVE_MONOTONIC_CLOCK) to make a package more appropriate for your enclave.
+You can also build your enclaves entirely within this environment and use it on
+your host machine.
+
+Links:
+Open Enclave SDK  : https://openenclave.io/sdk/
+Proot             : https://proot-me.github.io/
+Alpine Linux Wiki : https://wiki.alpinelinux.org/wiki/Main_Page
+Building Packages : https://wiki.alpinelinux.org/wiki/Abuild_and_Helpers
+Package Search    : https://pkgs.alpinelinux.org/packages
+Search Contents   : https://pkgs.alpinelinux.org/contents
+
+usage: apkman COMMAND [<ARGUMENTS>]
+
+Package installation and removal:
+  search     Search for packages matching given patterns.
+             E.g:
+                apkman search sqlite quickjs
+             Hint: Search for static and dev versions of libraries.
+             Hint: Use the \`Search Contents\` link above to find out what package
+                   contains the header/library files you are looking for.
+  add        Install packages
+             E.g:
+                apkman add sqlite-static sqlite-dev 
+                apkman add quickjs 
+  del        Remove given packages.
+             
+Using packages:
+  root       The root folder of this alpine-linux instance. Header and library paths
+             can be specified relative to the root path.
+             E.g: 
+             Specify header paths to compiler:
+                -I \`apkman root\`/usr/include/c++/10.2.1 -I \`apkman root\`/usr/include
+             Specify library paths to linker:
+                -L \`apkman root\`/usr/lib
+
+Building packages:
+  build-init Set up the environment for building packages. This needs to be done once
+             per apkman instance. apkman will install compilers and tools (build-base)
+             for building packages. Additionally it will clone the Alpine aports
+             repository to /apkbuild/aports directory. This repository contains the 
+             recipe for building each package.
+  prepare    Fetch the sources for a given package and prepare it for building.
+  build      Build a given package. 
+             Build artifacts are copied to /apkbuild/pkgs folder.
+	     Specify 
+                 -L \`apkman root\`/apkbuild/pkgs/usr/lib
+             to the linker to find the custom built version of the package.
+
+Execute commands:
+ -c          Execute the given command. This is useful for scripting as well as
+             to executing a command without entering the shell.
+             E.g:
+                 apkman -c ls /usr/include
+
+Development:
+ shell      Enter the Alpine linux install using proot.
+            This environment is ideal for package management, and development.
+            Almost everything works in this environment with the notable exception of
+            GDB. For that use chroot.
+ chroot     Enter the Alpine linux install using chroot. This requires root access.
+            Use this when the proot environment is not sufficient.
+
+Help:
+ help       Print usage.
+"
+
+  echo "$usage"
 }
 
 ensure_apkman_dir()
@@ -68,6 +144,7 @@ enter_chroot()
     mount --bind /dev/shm "${ALPINE_FS}/dev/shm"
     mount --bind /proc    "${ALPINE_FS}/proc"
     mount --bind /sys     "${ALPINE_FS}/sys"
+    export PS1="apkman chroot \w# "
     sudo chroot "${ALPINE_FS}" /bin/sh
     umount --recursive "${ALPINE_FS}/dev"
     umount --recursive "${ALPINE_FS}/proc"
@@ -78,7 +155,7 @@ proot_exec()
 {
   export SHELL=/bin/sh
   export TERM=xterm-256color
-  export PS1="apkman \w) "
+  export PS1="apkman \w$ "
   proot -b /dev -b /dev/pts -b /proc -b /sys -b /dev/shm \
         -0 \
         -r alpine-fs \
@@ -102,7 +179,7 @@ if [ ! -z "$SUDO_USER" ]; then
         chroot )
             USER=$SUDO_USER
             unset SUDO_USER
-            runuser -u $USER -- $0 init
+            runuser -u $USER -- $0 --init
             cd $APKMAN_DIR
             enter_chroot
             ;;
@@ -123,7 +200,7 @@ mkdir -p /apkbuild && cd /apkbuild
 
 if ! test -f packages.done; then
   echo \"Installing apkbuild prerequisites\"
-  apk add git runuser build-base alpine-sdk clang gdb && touch packages.done
+  apk add git runuser build-base alpine-sdk clang gdb bear && touch packages.done
 fi
 
 if ! test -f keygen.done; then
@@ -154,7 +231,15 @@ export CC=clang
 export CXX=clang++
 export CFLAGS="$FLAGS"
 export CXXFLAGS="$FLAGS"
-cd /apkbuild/aports/main/\$1
+if [ -d "/apkbuild/aports/testing/\$1" ]; then
+   cd "/apkbuild/aports/testing/\$1"
+fi 
+if [ -d "/apkbuild/aports/community/\$1" ]; then
+   cd "/apkbuild/aports/community/\$1"
+fi 
+if [ -d "/apkbuild/aports/main/\$1" ]; then
+   cd "/apkbuild/aports/main/\$1"
+fi 
 abuild -F checksum
 abuild -F deps
 abuild -F unpack
@@ -170,8 +255,16 @@ export CC=clang
 export CXX=clang++
 export CFLAGS="$FLAGS"
 export CXXFLAGS="$FLAGS"
-cd /apkbuild/aports/main/\$1
-abuild -F -K build
+if [ -d "/apkbuild/aports/testing/\$1" ]; then
+   cd "/apkbuild/aports/testing/\$1"
+fi 
+if [ -d "/apkbuild/aports/community/\$1" ]; then
+   cd "/apkbuild/aports/community/\$1"
+fi 
+if [ -d "/apkbuild/aports/main/\$1" ]; then
+   cd "/apkbuild/aports/main/\$1"
+fi 
+bear -- abuild -F -K build
 abuild -F -K package
 mkdir -p /apkbuild/pkgs
 cp -r pkg/\$1/* /apkbuild/pkgs
@@ -196,32 +289,21 @@ BUILD_USER_CXX_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include/c++/10.2.1"
 BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
 
 case "$1" in
-    "chroot")
-        echo "chroot requires sudo"
-        exit 1
-        ;;
-
     "search")
-        proot_exec apk search $2 | sort
+        proot_exec apk $@ -v | sort
         ;;
 
     "add")
-        proot_exec apk add $2
+        proot_exec apk $@
         ;;
 
     "del")
-        proot_exec apk del $2
+        proot_exec apk $@
         ;;
 
-    "shell")
-        proot_exec sh -c "sh"
-        ;;
-
-    "init")
-        ensure_apkman_dir
-        ensure_dependencies
-        setup_alpine_fs
-        ;;
+    "root")
+	echo "$ROOTFS_PATH"
+	;;
 
     "build-init")
         ensure_apkbuild_prereqs
@@ -239,33 +321,31 @@ case "$1" in
 
     "-c")
         shift
-        proot_exec "$@"
+        proot_exec sh -c "sh -c $@"
         ;;
 
-    "include-paths"|"-I")
-        ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
-        BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
-        USER_INCLUDE="${ROOTFS_PATH}/usr/include"
-        echo " -I\"${BUILD_USER_INCLUDE}\" -I\"${USER_INCLUDE}\" "
+    "shell")
+        proot_exec sh
         ;;
 
-    "include-paths-cmake"|"-IC")
-        ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
-        BUILD_USER_INCLUDE="${ROOTFS_PATH}/apkbuild/pkgs/usr/include"
-        USER_INCLUDE="${ROOTFS_PATH}/usr/include"
-        echo "${BUILD_USER_INCLUDE};${USER_INCLUDE}"
+    "chroot")
+	SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+        echo "Using sudo to enter chroot"
+	sudo $SCRIPTPATH/apkman chroot
         ;;
 
-    "cxxinclude-paths-cmake"|"-IC")
-        echo "${BUILD_USER_CXX_INCLUDE};${BUILD_USER_INCLUDE};${USER_CXX_INCLUDE};${USER_CXX_MUSL_INCLUDE};${USER_INCLUDE};"
+    "help")
+	print_usage
+	;;
+
+    "--init")
+        ensure_apkman_dir
+        ensure_dependencies
+        setup_alpine_fs
         ;;
 
-
-    "lib-paths"|"lib-paths-cmake")
-        echo "-L${USER_LIB} -L{LIB} -L{GCC_LIB} -L{MUSL_LIB} -L${BUILD_USER_LIB} -L${BUILD_LIB}"
-        ;;
-
-    "root")
-        echo "${APKMAN_DIR}/${ALPINE_FS}"
-        ;;
+    *)
+	print_usage
+	exit 1
+	;;
 esac

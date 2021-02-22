@@ -1,32 +1,10 @@
 // Copyright (c) Open Enclave SDK contributors.
 // Licensed under the MIT License.
 
-#include <limits.h>
 #include <openenclave/host.h>
 #include <openenclave/internal/error.h>
 #include <openenclave/internal/tests.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "../../../host/strings.h"
-#include "demo_u.h"
-
-int host_echo(
-    char* in,
-    char* out,
-    char* str1,
-    char* str2,
-    char* str3,
-    int out_length)
-{
-    OE_TEST(strcmp(str1, "oe_host_strdup1") == 0);
-    OE_TEST(strcmp(str2, "oe_host_strdup2") == 0);
-    OE_TEST(strcmp(str3, "oe_host_strdup3") == 0);
-
-    strcpy_s(out, out_length, in);
-
-    return 0;
-}
 
 int main(int argc, const char* argv[])
 {
@@ -45,7 +23,7 @@ int main(int argc, const char* argv[])
              argv[1], OE_ENCLAVE_TYPE_SGX, flags, NULL, 0, &enclave)) != OE_OK)
         oe_put_err("oe_create_enclave(): result=%u", result);
 
-    result = enc_demo(enclave, &return_val, "compilerrt-demo");
+    result = enc_demo(enclave, &return_val, argc-1, ++argv);
 
     if (result != OE_OK)
         oe_put_err("oe_call_enclave() failed: result=%u", result);
@@ -56,5 +34,6 @@ int main(int argc, const char* argv[])
     result = oe_terminate_enclave(enclave);
     OE_TEST(result == OE_OK);
 
+    printf("=== passed all tests (libcc)\n");    
     return 0;
 }
