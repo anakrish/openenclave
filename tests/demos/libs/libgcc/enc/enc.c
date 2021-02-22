@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <complex.h>
+
 double complex foo(double complex a, double complex b)
 {
     return a * b;
@@ -15,11 +16,14 @@ double complex foo(double complex a, double complex b)
 
 complex double g = 1;
 complex double h = 1;
-int enc_demo(char* in)
+
+int enc_main(int argc, const char** argv)
 {
+    OE_UNUSED(argc);
+    OE_UNUSED(argv);
+    
     foo(g, h);
 
-    printf("=== passed all tests (%s)\n", in);
     return 0;
 }
 

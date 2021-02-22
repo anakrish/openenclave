@@ -39,8 +39,8 @@ enclave_link_libraries(
   sqlite_enc
   # STEP 3: Add library path and libraries.
   # Library obtained by installing sqlite3-static package.
-  -L${APKMAN_ROOT}/apkbuild/pkgs/usr/lib
-  #-L${APKMAN_ROOT}/usr/lib
+  # -L${APKMAN_ROOT}/apkbuild/pkgs/usr/lib
+  -L${APKMAN_ROOT}/usr/lib
   libsqlite3.a
   oelibc
   # STEP 4: Allow missing symbols for development.

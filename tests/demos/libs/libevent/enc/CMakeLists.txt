@@ -10,42 +10,33 @@ add_custom_command(
     edger8r --trusted ${EDL_FILE} --search-path ${PROJECT_SOURCE_DIR}/include
     ${DEFINE_OE_SGX} --search-path ${CMAKE_CURRENT_SOURCE_DIR})
 
+# STEP 1: Obtain apkman root path.
 execute_process(
-  COMMAND apkman include-paths-cmake
+  COMMAND apkman root
   COMMAND_ERROR_IS_FATAL ANY
   OUTPUT_STRIP_TRAILING_WHITESPACE
-  OUTPUT_VARIABLE APKMAN_INCLUDE_PATHS)
-
-execute_process(
-  COMMAND apkman lib-paths-cmake
-  COMMAND_ERROR_IS_FATAL ANY
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  OUTPUT_VARIABLE APKMAN_LIB_PATHS)
-
-
-message("apkman include paths: ${APKMAN_INCLUDE_PATHS}")
+  OUTPUT_VARIABLE APKMAN_ROOT)
 
 add_enclave(
   TARGET
-  demo6_enc
+  libevent_enc
   UUID
   71b0822f-42a3-4543-a97c-ca491f76b82c
   SOURCES
   enc.cpp
+  # STEP 5: Implement missing functions.
   stubs.c
   ${CMAKE_CURRENT_BINARY_DIR}/demo_t.c)
 
-enclave_include_directories(demo6_enc
+enclave_include_directories(libevent_enc
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${APKMAN_INCLUDE_PATHS}
-
-  # For using custom built lua
-  #TODO: fetch path via apkman
-  #~/.apkman/alpine-fs/apkbuild/pkgs/usr/include/lua5.3
+  # STEP 2: Add include paths.
+  # Headers obtained by installing libevent-dev package.
+  ${APKMAN_ROOT}/usr/include
   )
 
-enclave_compile_options(demo6_enc
+enclave_compile_options(libevent_enc
    PRIVATE
    -Wno-implicit-int-conversion
    -Wno-bitwise-op-parentheses
@@ -58,13 +49,15 @@ enclave_compile_options(demo6_enc
 )
 
 enclave_link_libraries(
-  demo6_enc
-  ${APKMAN_LIB_PATHS}
+  libevent_enc
+  # STEP 3: Add library path and libraries.
+  # Library obtained by installing libevent-static package.
+  -L${APKMAN_ROOT}/apkbuild/pkgs/usr/lib
+  -L${APKMAN_ROOT}/usr/lib
   libevent_core.a
   oelibcxx
   oelibc
   oehostepoll
   oehostfs
   oehostsock
-  -fuse-ld=lld
   -Wl,--warn-unresolved-symbols)

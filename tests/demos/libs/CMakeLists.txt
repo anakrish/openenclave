@@ -1,1 +1,4 @@
+add_subdirectory(libevent)
+add_subdirectory(libgcc)
 add_subdirectory(sqlite)
+add_subdirectory(zlib)

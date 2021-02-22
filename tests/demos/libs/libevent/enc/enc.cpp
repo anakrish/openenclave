@@ -104,10 +104,16 @@ int main_fcn(int argc, const char** argv)
 
     evutil_socket_t listener;
     struct sockaddr_in sin;
+    struct event_config *config;
     struct event_base *base;
     struct event *listener_event;
 
-    base = event_base_new();
+    config = event_config_new();
+    if (!config)
+	return -1;
+    event_config_avoid_method(config, "pipe");
+    
+    base = event_base_new_with_config(config);
     if (!base)
 	return 1;
 

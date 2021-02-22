@@ -10,7 +10,7 @@ add_custom_command(
     edger8r --untrusted ${EDL_FILE} --search-path ${PROJECT_SOURCE_DIR}/include
     ${DEFINE_OE_SGX} --search-path ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(demo6_host host.c demo_u.c)
+add_executable(libevent_host host.c demo_u.c)
 
-target_include_directories(demo6_host PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(demo6_host oehost)
+target_include_directories(libevent_host PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(libevent_host oehost)

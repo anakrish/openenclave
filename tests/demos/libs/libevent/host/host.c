@@ -39,5 +39,7 @@ int main(int argc, const char* argv[])
     result = oe_terminate_enclave(enclave);
     OE_TEST(result == OE_OK);
 
+    printf("=== passed all tests (libevent)\n");
+    
     return 0;
 }

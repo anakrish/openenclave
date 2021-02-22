@@ -7,4 +7,4 @@ if (BUILD_ENCLAVES)
   add_subdirectory(enc)
 endif ()
 
-add_enclave_test(tests/demos/demo4 demo4_host demo4_enc)
+add_enclave_test(tests/demos/zlib zlib_host zlib_enc < ${PROJECT_DIR}/CHANGELOG.md > ch.z)
