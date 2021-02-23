@@ -96,6 +96,13 @@ Execute commands:
              to executing a command without entering the shell.
              E.g:
                  apkman -c ls /usr/include
+exec         Execute a command in the current working directory. Current user's home
+             folder made available to alpine linux. Tools in the alpine-linux distribution
+             can thus be run on any file in the home folder.
+             E.g:
+                 apkman exec clang -c foo.c
+                 Compile foo.c in current folder using the clang compiler from the alpine
+                 install.
 
 Development:
  shell      Enter the Alpine linux install using proot.
@@ -160,6 +167,18 @@ proot_exec()
         -0 \
         -r alpine-fs \
         -w / \
+        "$@"
+}
+
+proot_exec_host()
+{
+  export SHELL=/bin/sh
+  export TERM=xterm-256color
+  export PS1="apkman \w$ "
+  proot -b /dev -b /dev/pts -b /proc -b /sys -b /dev/shm \
+	-b /home/$USER \
+        -r alpine-fs \
+        -w "$CURRENT_DIR" \
         "$@"
 }
 
@@ -323,6 +342,11 @@ case "$1" in
         shift
         proot_exec  $@
         ;;
+
+    "exec")
+	shift
+	proot_exec_host $@
+	;;
 
     "shell")
         proot_exec sh
