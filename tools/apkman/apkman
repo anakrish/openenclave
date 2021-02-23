@@ -321,7 +321,7 @@ case "$1" in
 
     "-c")
         shift
-        proot_exec sh -c "sh -c $@"
+        proot_exec  $@
         ;;
 
     "shell")

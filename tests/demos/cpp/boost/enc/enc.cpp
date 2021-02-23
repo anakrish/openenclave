@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <boost/bimap.hpp>
-#include <immintrin.h>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <iostream>
 #include <sstream>
@@ -99,9 +98,11 @@ void print_map(const MapType & map,
     }
 }
 
-int enc_demo(char* in)
+int enc_main(int argc, const char** argv)
 {
-
+    OE_UNUSED(argc);
+    OE_UNUSED(argv);
+    
     // bimap
     {
         // Soccer World cup
@@ -185,7 +186,7 @@ int enc_demo(char* in)
             {
                 std::string message = "Limit of " + bit_counts[current_limit] + " bit integers";
                 std::cout << std::setfill('.') << std::setw(digits+1) << std::right << message << std::setfill(' ') << std::endl;
-v               ++current_limit;
+               ++current_limit;
             }
             std::cout << std::setw(digits + 1) << std::right << results[j] << std::endl;
         }
@@ -196,8 +197,6 @@ v               ++current_limit;
 	main_serialize();
     }
     
-    printf("=== passed all tests (%s)\n", in);
-
     return 0;
 }
 

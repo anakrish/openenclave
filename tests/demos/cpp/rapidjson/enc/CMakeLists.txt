@@ -10,30 +10,38 @@ add_custom_command(
     edger8r --trusted ${EDL_FILE} --search-path ${PROJECT_SOURCE_DIR}/include
     ${DEFINE_OE_SGX} --search-path ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Needs rapidjson-dev
-# nolehmann-json is also header only with a more C++ syntax.
+# STEP 1: Obtain apkman root path.
 execute_process(
-  COMMAND apkman include-paths-cmake
+  COMMAND apkman root
   COMMAND_ERROR_IS_FATAL ANY
   OUTPUT_STRIP_TRAILING_WHITESPACE
-  OUTPUT_VARIABLE APKMAN_INCLUDE_PATHS)
+  OUTPUT_VARIABLE APKMAN_ROOT)
 
 add_enclave(
   TARGET
-  demo2_enc
+  rapidjson_enc
   UUID
   71b0822f-42a3-4543-a97c-ca491f76b82c
   SOURCES
   enc.cpp
+  # STEP 5: Implement missing functions.
+  # stubs.c
   ${CMAKE_CURRENT_BINARY_DIR}/demo_t.c)
 
-enclave_include_directories(demo2_enc
+enclave_include_directories(rapidjson_enc
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${APKMAN_INCLUDE_PATHS})
+  # STEP 2: Add include paths.
+  # Headers obtained by installing sqlite3-dev package.
+  ${APKMAN_ROOT}/usr/include)
+
 
 enclave_link_libraries(
-  demo2_enc
+  rapidjson_enc
+  # STEP 3: Add library path and libraries.
   oelibcxx
   oelibc
-  -Wl,--warn-unresolved-symbols)
+  # STEP 4: Allow missing symbols for development.
+  #-Wl,--warn-unresolved-symbols
+)
+

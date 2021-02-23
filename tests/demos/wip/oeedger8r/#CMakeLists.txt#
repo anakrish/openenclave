@@ -7,4 +7,4 @@ if (BUILD_ENCLAVES)
   add_subdirectory(enc)
 endif ()
 
-add_enclave_test(tests/demos/rapidjson rapidjson_host rapidjson_enc)
+add_enclave_test(tests/demos/oeedger8r oeedger8r_host oeedger8r_enc)

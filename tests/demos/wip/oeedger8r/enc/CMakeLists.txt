@@ -19,50 +19,40 @@ execute_process(
 
 add_enclave(
   TARGET
-  boost_enc
+  oeedger8r_enc
   UUID
   71b0822f-42a3-4543-a97c-ca491f76b82c
   SOURCES
   enc.cpp
+  ${PROJECT_SOURCE_DIR}/tools/oeedger8r-cpp/src/lexer.cpp
+  ${PROJECT_SOURCE_DIR}/tools/oeedger8r-cpp/src/parser.cpp
+  ${PROJECT_SOURCE_DIR}/tools/oeedger8r-cpp/src/main.cpp    
   # STEP 5: Implement missing functions.
   # stubs.c
   ${CMAKE_CURRENT_BINARY_DIR}/demo_t.c)
 
-enclave_include_directories(boost_enc
+enclave_include_directories(oeedger8r_enc
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
   # STEP 2: Add include paths.
-  # C++
-  ${APKMAN_ROOT}/usr/include/c++/10.2.1
-  ${APKMAN_ROOT}/usr/include/c++/10.2.1/x86_64-alpine-linux-musl
-  # C
-  ${APKMAN_ROOT}/usr/include
-  # intrinsics
-  ${APKMAN_ROOT}/usr/lib/clang/10.0.1/include/)
+  # Headers obtained by installing sqlite3-dev package.
+  #${APKMAN_ROOT}/usr/include
+  )
 
-enclave_compile_options(boost_enc
+enclave_compile_options(oeedger8r_enc
   PRIVATE
+  -Wno-implicit-float-conversion
   -Wno-unused-parameter
-  -Wno-shorten-64-to-32
-  -Wno-shift-op-parentheses
-  -Wno-implicit-int-conversion
-  -Wno-bitwise-op-parentheses
-  -Wno-sign-conversion
-  -Wno-implicit-int-float-conversion
-  -Wno-float-conversion
-  -Wno-misleading-indentation
+  -Wno-unused-variable
 )
 
-target_link_libraries( 
-  boost_enc
+enclave_link_libraries(
+  oeedger8r_enc
   # STEP 3: Add library path and libraries.
-  -L${APKMAN_ROOT}/usr/lib
-  libboost_serialization.a
-  libstdc++.a
-  # for __umodti3
-  libgcc.a
-  oelibcxx # For libunwind which has been patched for enclaves
+  oelibcxx
   oelibc
-  # Step 4: Warn unresolved symbols
-  -Wl,--warn-unresolved-symbols)
- 
+  oehostfs
+  # STEP 4: Allow missing symbols for development.
+  #-Wl,--warn-unresolved-symbols
+)
+

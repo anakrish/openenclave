@@ -5,7 +5,6 @@
 #include <openenclave/internal/error.h>
 #include <openenclave/internal/tests.h>
 #include <stdio.h>
-
 #include "demo_u.h"
 
 int main(int argc, const char* argv[])
@@ -13,7 +12,7 @@ int main(int argc, const char* argv[])
     oe_result_t result;
     oe_enclave_t* enclave = NULL;
     int return_val;
-    if (argc != 2)
+    if (argc < 2)
     {
         fprintf(stderr, "Usage: %s ENCLAVE_PATH\n", argv[0]);
         return 1;
@@ -36,7 +35,6 @@ int main(int argc, const char* argv[])
     result = oe_terminate_enclave(enclave);
     OE_TEST(result == OE_OK || result == OE_MEMORY_LEAK);
 
-    printf("=== passed all tests (boost)\n");    
-
+    printf("=== passed all tests (rapidjson)\n");    
     return 0;
 }
