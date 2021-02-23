@@ -92,11 +92,11 @@ Building packages:
              to the linker to find the custom built version of the package.
 
 Execute commands:
- -c          Execute the given command. This is useful for scripting as well as
+  -c         Execute the given command. This is useful for scripting as well as
              to executing a command without entering the shell.
              E.g:
                  apkman -c ls /usr/include
-exec         Execute a command in the current working directory. Current user's home
+  exec       Execute a command in the current working directory. Current user's home
              folder made available to alpine linux. Tools in the alpine-linux distribution
              can thus be run on any file in the home folder.
              E.g:
