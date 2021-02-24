@@ -1,3 +1,4 @@
+add_subdirectory(hiredis)
 add_subdirectory(libevent)
 add_subdirectory(libgcc)
 add_subdirectory(sqlite)
