@@ -87,7 +87,7 @@ Building packages:
   prepare    Fetch the sources for a given package and prepare it for building.
   build      Build a given package. 
              Build artifacts are copied to /apkbuild/pkgs folder.
-	     Specify 
+             Specify 
                  -L \`apkman root\`/apkbuild/pkgs/usr/lib
              to the linker to find the custom built version of the package.
 
@@ -176,7 +176,7 @@ proot_exec_host()
   export TERM=xterm-256color
   export PS1="apkman \w$ "
   proot -b /dev -b /dev/pts -b /proc -b /sys -b /dev/shm \
-	-b /home/$USER \
+        -b /home/$USER \
         -r alpine-fs \
         -w "$CURRENT_DIR" \
         "$@"
@@ -212,6 +212,75 @@ ensure_apkman_dir
 ensure_dependencies
 setup_alpine_fs
 
+
+wrap_ld()
+{
+    if test -f "$ALPINE_FS/apkbuild/ld.wrap.done"; then
+        return
+    fi
+    echo "Wrapping ld"
+    LD_DIR="${ALPINE_FS}/usr/x86_64-alpine-linux-musl/bin"
+    if ! test -f "$LD_DIR/ld.orig"; then
+        mv "$LD_DIR/ld" "$LD_DIR/ld.orig"
+    fi
+    # Remove ld found in usr/bin folder so that everything get routed to
+    # the same ld
+    #if test -f "$ALPINE_FS/usr/bin/ld"; then
+    #    rm "$ALPINE_FS/usr/bin/ld"
+    #fi
+    /bin/cat <<EOF > "$LD_DIR/ld"
+#!/bin/bash
+create_archive() {
+    OBJECTS=""
+    DEPS=""
+    next_is_out=0
+    libname="a.a"
+    for arg in "\$@"
+    do
+        if [ \$next_is_out -eq 1 ]; then
+            libname="\$arg.a"
+            next_is_out=0
+            continue
+        fi
+        case "\$arg" in
+            *"crt1.o"|*"crtbeginS.o"|*"crtendS.o"|*"crti.o"|*"crts.o"|*"crtn.o")
+                continue
+                ;;
+            *".o")
+                OBJECTS="\$OBJECTS \$arg"
+                ;;
+            *".a")
+                DEPS="\$DEPS \$arg"
+                ;;
+            "-o")
+                next_is_out=1
+        esac
+    done
+    EXELIBS="/apkbuild/exe-libs"
+    mkdir -p \$EXELIBS
+    rm -rf "\$EXELIBS/\$libname"
+    mkdir -p "\$EXELIBS/\$libname"
+    DEPSTR=""
+    for dep in \$DEPS
+    do
+        cp "\$dep" "\$EXELIBS/\$libname/"
+        DEPSTR="\$DEPSTR -l:\$(basename \$dep)"
+    done
+                
+    if [ ! -z "\$OBJECTS" ]; then       
+        ar r  "\$EXELIBS/\$libname/\$libname" \$OBJECTS 2>/dev/null
+        echo "$DEPSTR" > "\$EXELIBS/\$libname/\$libname.deps"
+    fi
+}
+
+/usr/x86_64-alpine-linux-musl/bin/ld.orig "\$@"
+create_archive "\$@" || exit 0
+EOF
+
+    chmod +x "$LD_DIR/ld"
+    touch "$ALPINE_FS/apkbuild/ld.wrap.done"
+}
+
 ensure_apkbuild_prereqs()
 {
     PREREQS_CMD="
@@ -239,7 +308,8 @@ if ! test -f git.clone.done; then
   touch git.clone.done
 fi
 "
-   proot_exec sh -c "$PREREQS_CMD"
+    proot_exec sh -c "$PREREQS_CMD"
+    wrap_ld
 }
 
 abuild_prepare()
@@ -292,7 +362,6 @@ EOM
     proot_exec sh /apkbuild/build.sh "$1"
 }
 
-
 ROOTFS_PATH="${APKMAN_DIR}/${ALPINE_FS}"
 BUILD_LIB="${ROOTFS_PATH}/apkbuild/pkgs/lib"
 BUILD_USER_LIB="${ROOTFS_PATH}/apkbuild/pkgs/usr/lib"
@@ -321,8 +390,8 @@ case "$1" in
         ;;
 
     "root")
-	echo "$ROOTFS_PATH"
-	;;
+        echo "$ROOTFS_PATH"
+        ;;
 
     "build-init")
         ensure_apkbuild_prereqs
@@ -344,23 +413,23 @@ case "$1" in
         ;;
 
     "exec")
-	shift
-	proot_exec_host $@
-	;;
+        shift
+        proot_exec_host $@
+        ;;
 
     "shell")
         proot_exec sh
         ;;
 
     "chroot")
-	SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+        SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
         echo "Using sudo to enter chroot"
-	sudo $SCRIPTPATH/apkman chroot
+        sudo $SCRIPTPATH/apkman chroot
         ;;
 
     "help")
-	print_usage
-	;;
+        print_usage
+        ;;
 
     "--init")
         ensure_apkman_dir
@@ -368,8 +437,12 @@ case "$1" in
         setup_alpine_fs
         ;;
 
+    "--wrap-ld")
+        wrap_ld
+        ;;
+
     *)
-	print_usage
-	exit 1
-	;;
+        print_usage
+        exit 1
+        ;;
 esac

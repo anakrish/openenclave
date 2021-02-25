@@ -35,6 +35,6 @@ int main(int argc, const char* argv[])
     result = oe_terminate_enclave(enclave);
     OE_TEST(result == OE_OK);
 
-    printf("=== passed all tests (sqlite)\n");
+    printf("=== passed all tests (hiredis)\n");
     return 0;
 }
