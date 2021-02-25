@@ -19,43 +19,48 @@ execute_process(
 
 add_enclave(
   TARGET
-  hiredis_enc
+  nodejs_enc
   UUID
   71b0822f-42a3-4543-a97c-ca491f76b82c
   SOURCES
-  enc.c
-  # STEP 5: Implement missing functions.
+  enc.cpp
   stubs.c
   ${CMAKE_CURRENT_BINARY_DIR}/demo_t.c)
 
-enclave_include_directories(hiredis_enc
+enclave_include_directories(nodejs_enc
   PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}
   # STEP 2: Add include paths.
-  # Headers obtained by installing hiredis3-dev package.
-  ${APKMAN_ROOT}/usr/include/hiredis
+  # Headers obtained by installing nodejs-dev package.
+  ${APKMAN_ROOT}/usr/include/node
   ${APKMAN_ROOT}/usr/include)
 
-enclave_compile_options(hiredis_enc
-  PRIVATE
-  -Wno-sign-conversion
-  -Wno-shorten-64-to-32
-  -Wno-shift-op-parentheses
-  -Wno-implicit-int-conversion
-  -Wno-bitwise-op-parentheses
+enclave_compile_options(nodejs_enc
+   PRIVATE
+   -Wno-implicit-int-conversion
+   -Wno-bitwise-op-parentheses
+   -Wno-shift-op-parentheses
+   -Wno-shorten-64-to-32
+   -Wno-implicit-float-conversion
+   -Wno-unused-parameter
+   -Wno-sign-conversion
 )
 
 enclave_link_libraries(
-  hiredis_enc
+  nodejs_enc
   # STEP 3: Add library path and libraries.
   # Library obtained by installing hiredis3-static package.
   -L${APKMAN_ROOT}/apkbuild/pkgs/usr/lib
   -L${APKMAN_ROOT}/usr/lib
-  libhiredis.a
+  ${APKMAN_ROOT}/apkbuild/aports/main/nodejs/src/node-v14.15.5/out/Release/obj.target/libnode.a
+  -l:libstdc++.a
+  oelibcxx
   oelibc
   oehostepoll
   oehostfs
   oehostsock
   oehostresolver
+  -fuse-ld=lld
   # STEP 4: Allow missing symbols for development.
   -Wl,--warn-unresolved-symbols)
+
