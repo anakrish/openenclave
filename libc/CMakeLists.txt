@@ -545,6 +545,8 @@ add_enclave_library(
   ${MUSLSRC}/search/lsearch.c
   ${MUSLSRC}/select/select.c
   ${MUSLSRC}/select/poll.c
+  ${MUSLSRC}/signal/sigaddset.c    
+  ${MUSLSRC}/signal/sigemptyset.c  
   ${MUSLSRC}/stat/mkdir.c
   ${MUSLSRC}/search/tdelete.c
   ${MUSLSRC}/search/tfind.c
@@ -763,11 +765,16 @@ add_enclave_library(
   ${MUSLSRC}/temp/__randname.c
   ${MUSLSRC}/thread/__lock.c
   ${MUSLSRC}/thread/__wait.c
+#  ${MUSLSRC}/thread/pthread_attr_init.c  
+  ${MUSLSRC}/thread/pthread_setcancelstate.c
+  ${MUSLSRC}/thread/pthread_setcanceltype.c
+  ${MUSLSRC}/thread/pthread_testcancel.c    
   ${MUSLSRC}/time/clock_gettime.c
   ${MUSLSRC}/time/difftime.c
   ${MUSLSRC}/time/gettimeofday.c
   ${MUSLSRC}/time/gmtime.c
   ${MUSLSRC}/time/gmtime_r.c
+  ${MUSLSRC}/time/localtime_r.c  
   ${MUSLSRC}/time/__map_file.c
   ${MUSLSRC}/time/__month_to_secs.c
   ${MUSLSRC}/time/mktime.c
@@ -798,6 +805,7 @@ add_enclave_library(
   ${MUSLSRC}/unistd/dup3.c
   ${MUSLSRC}/unistd/getcwd.c
   ${MUSLSRC}/unistd/gethostname.c
+  ${MUSLSRC}/unistd/isatty.c
   ${MUSLSRC}/unistd/link.c
   ${MUSLSRC}/unistd/lseek.c
   ${MUSLSRC}/unistd/pread.c
