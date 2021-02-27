@@ -1908,7 +1908,7 @@ static oe_result_t _elf64_load_relocations(
         /* The enclave doesn't perform relocations on R_X86_64_GLOB_DAT, but
          * we allow it for code that checks for the existence of weak symbols
          * before using them. */
-        if (reloc_type != R_X86_64_RELATIVE && reloc_type != R_X86_64_TPOFF64 &&
+        if (reloc_type != R_X86_64_NONE && reloc_type != R_X86_64_RELATIVE && reloc_type != R_X86_64_TPOFF64 &&
             reloc_type != R_X86_64_GLOB_DAT && reloc_type != R_X86_64_64 &&
             reloc_type != R_X86_64_JUMP_SLOT)
         {

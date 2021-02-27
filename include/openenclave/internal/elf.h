@@ -150,6 +150,7 @@ ELF_EXTERNC_BEGIN
 #define DT_VERSYM 0x6ffffff0
 
 /* elf64_rel.r_info */
+#define R_X86_64_NONE 0
 #define R_X86_64_64 1
 #define R_X86_64_GLOB_DAT 6
 #define R_X86_64_JUMP_SLOT 7
