@@ -47,7 +47,7 @@ OE_EXTERNC_BEGIN
 #define OE_S_IRWOTH (OE_S_IROTH | OE_S_IWOTH)
 
 OE_STATIC_ASSERT((sizeof(struct oe_stat_t) % 8) == 0);
-OE_STATIC_ASSERT(sizeof(struct oe_stat_t) == 120);
+OE_STATIC_ASSERT(sizeof(struct oe_stat_t) == 144);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_dev) == 0);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_ino) == 8);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_nlink) == 16);
@@ -64,6 +64,7 @@ OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_mtim.tv_sec) == 88);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_mtim.tv_nsec) == 96);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_ctim.tv_sec) == 104);
 OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, st_ctim.tv_nsec) == 112);
+OE_STATIC_ASSERT(OE_OFFSETOF(struct oe_stat_t, __unused) == 120);
 
 #define OE_R_OR 04
 #define OE_W_OR 02

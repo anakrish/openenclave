@@ -71,6 +71,17 @@ OE_WEAK OE_DEFINE_SYSCALL1(SYS_chdir)
     return oe_chdir(path);
 }
 
+// TODO: Implement this correctly
+OE_WEAK OE_DEFINE_SYSCALL4_M(SYS_clock_nanosleep)
+{
+    OE_UNUSED(arg1);
+    OE_UNUSED(arg2);
+    oe_errno = 0;
+    struct oe_timespec* req = (struct oe_timespec*)arg3;
+    struct oe_timespec* rem = (struct oe_timespec*)arg4;
+    return (long)oe_nanosleep(req, rem);
+}
+
 OE_WEAK OE_DEFINE_SYSCALL1_M(SYS_close)
 {
     oe_errno = 0;
@@ -535,6 +546,14 @@ OE_WEAK OE_WEAK OE_DEFINE_SYSCALL3(SYS_lseek)
     ssize_t off = (ssize_t)arg2;
     int whence = (int)arg3;
     return oe_lseek(fd, off, whence);
+}
+
+OE_WEAK OE_DEFINE_SYSCALL2(SYS_lstat)
+{
+    OE_UNUSED(arg1);
+    OE_UNUSED(arg2);
+    oe_errno = OE_ENOSYS;
+    return -1;
 }
 
 #if __x86_64__ || _M_X64

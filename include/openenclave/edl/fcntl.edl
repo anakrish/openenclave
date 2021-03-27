@@ -49,6 +49,7 @@ enclave
         struct __st st_atim;
         struct __st st_mtim;
         struct __st st_ctim;
+	int64_t __unused[3];
     };
 
     untrusted

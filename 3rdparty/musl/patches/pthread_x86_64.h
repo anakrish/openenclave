@@ -4,7 +4,7 @@
 #ifndef _OE_MUSL_PATCHES_PTHREAD_H
 #define _OE_MUSL_PATCHES_PTHREAD_H
 
-struct __pthread* __pthread_self();
+struct __pthread* __get_tp();
 
 #define TP_ADJ(p) (p)
 

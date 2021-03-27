@@ -16,3 +16,5 @@
 #undef OE_NEED_STDC_NAMES
 #undef __UNDEF_OE_NEED_STDC_NAMES
 #endif
+
+OE_WEAK_ALIAS(malloc, __libc_malloc);
