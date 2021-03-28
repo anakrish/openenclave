@@ -9,6 +9,9 @@
 #include <openenclave/enclave.h>
 #include <openenclave/internal/raise.h>
 #include <openenclave/internal/report.h>
+#include <openenclave/internal/tests.h>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -299,6 +302,63 @@ oe_result_t get_tls_cert_signed_with_rsa_key(
     size_t* cert_size)
 {
     return get_tls_cert_signed_with_key(MBEDTLS_PK_RSA, cert, cert_size);
+}
+
+char tmp_file[PATH_MAX];
+
+void set_tmp_file(const char* path)
+{
+    sprintf(tmp_file, "%s", path);
+}
+
+void print_bio_certificate(const uint8_t* cert, size_t cert_length)
+{
+    X509* x509;
+    BIO* input = BIO_new_mem_buf(cert, (int)cert_length);
+    OE_TEST(input != NULL);
+    x509 = d2i_X509_bio(input, nullptr);
+    OE_TEST(x509 != NULL);
+    FILE* file = fopen(tmp_file, "w");
+    OE_TEST(file != 0);
+    X509_print_ex_fp(
+        stdout,
+        x509,
+        XN_FLAG_COMPAT,
+        XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_DUMP_UNKNOWN_FIELDS);
+    fclose(file);
+    BIO_free_all(input);
+}
+
+void print_pem_certificate(const uint8_t* cert, size_t cert_length)
+{
+    X509* x509;
+    BIO* input = BIO_new_mem_buf(cert, (int)cert_length);
+    OE_TEST(input != NULL);
+    x509 = PEM_read_bio_X509(input, NULL, 0, NULL);
+    OE_TEST(x509 != NULL);
+    FILE* file = fopen(tmp_file, "w");
+    OE_TEST(file != 0);
+    X509_print_ex_fp(
+        file,
+        x509,
+        XN_FLAG_COMPAT,
+        XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_DUMP_UNKNOWN_FIELDS);
+    fclose(file);
+    BIO_free_all(input);
+}
+
+void print_pem_crl(const uint8_t* crl, size_t crl_length)
+{
+    X509_CRL* x509;
+    BIO* input = BIO_new_mem_buf(crl, (int)crl_length);
+    OE_TEST(input != NULL);
+    x509 = PEM_read_bio_X509_CRL(input, NULL, NULL, NULL);
+    OE_TEST(x509 != NULL);
+    FILE* file = fopen(tmp_file, "w");
+    OE_TEST(file != 0);
+    X509_CRL_print_fp(file, x509);
+    fclose(file);
+    BIO_free_all(input);
 }
 
 OE_SET_ENCLAVE_SGX(

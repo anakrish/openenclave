@@ -37,6 +37,8 @@ typedef struct _input_params
 static input_params_t _params;
 
 FILE* log_file = nullptr;
+oe_enclave_t* enclave = nullptr;
+const char* tmp_file = "./tmp_file.txt";
 
 // This is the identity validation callback. A TLS connecting party (client or
 // server) can verify the passed in "identity" information to decide whether to
@@ -283,7 +285,6 @@ int main(int argc, const char* argv[])
     }
 
     oe_result_t result;
-    oe_enclave_t* enclave = nullptr;
 
     const uint32_t flags = oe_get_create_flags();
     if ((flags & OE_ENCLAVE_FLAG_SIMULATE) != 0)
@@ -311,6 +312,9 @@ int main(int argc, const char* argv[])
         ret = 1;
         goto exit;
     }
+
+    // Set tmp file.
+    OE_TEST(set_tmp_file(enclave, tmp_file) == OE_OK);
 
     // Create log file
 #ifdef _WIN32

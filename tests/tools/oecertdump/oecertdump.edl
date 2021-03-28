@@ -19,5 +19,17 @@ enclave {
         public oe_result_t get_tls_cert_signed_with_rsa_key(
             [out] unsigned char** data,
             [out] size_t* data_size);
+
+
+	public void set_tmp_file([in, string] const char* path);
+	
+	public void print_bio_certificate([in, count=cert_length] const uint8_t* cert,
+	                                  size_t cert_length);
+
+        public void print_pem_certificate([in, count=cert_length] const uint8_t* cert,
+	                                  size_t cert_length);
+
+        public void print_pem_crl([in, count=crl_length] const uint8_t* crl,
+	                          size_t crl_length);
     };
 };

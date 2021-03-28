@@ -10,18 +10,14 @@
 #include <openenclave/internal/report.h>
 #include <openenclave/internal/sgxcertextensions.h>
 #include <openenclave/internal/tests.h>
-#include <openssl/bio.h>
-#include <openssl/pem.h>
-#include <openssl/x509.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fstream>
 #include "oecertdump_u.h"
 
 #if defined(__linux__)
 #include <dlfcn.h>
-#else
-#include <openssl/applink.c>
 #endif
 
 #include "../../../../common/sgx/collateral.h"
@@ -29,6 +25,8 @@
 #include "../../../../host/sgx/sgxquoteprovider.h"
 
 extern FILE* log_file;
+extern oe_enclave_t* enclave;
+extern const char* tmp_file;
 
 #define OE_PEM_BEGIN_CERTIFICATE "-----BEGIN CERTIFICATE-----"
 #define OE_PEM_BEGIN_CERTIFICATE_LEN (sizeof(OE_PEM_BEGIN_CERTIFICATE) - 1)
@@ -57,42 +55,33 @@ void log(const char* fmt, ...)
     }
 }
 
+std::string tmp_file_to_str()
+{
+    std::ifstream ifs(tmp_file);
+    return std::string(
+        (std::istreambuf_iterator<char>(ifs)),
+        (std::istreambuf_iterator<char>()));
+}
+
 void output_certificate(const uint8_t* data, size_t data_len)
 {
-    X509* x509;
-    BIO* input = BIO_new_mem_buf(data, (int)data_len);
-    x509 = d2i_X509_bio(input, nullptr);
-    if (x509)
-        X509_print_ex_fp(
-            stdout,
-            x509,
-            XN_FLAG_COMPAT,
-            XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_DUMP_UNKNOWN_FIELDS);
-    BIO_free_all(input);
+    print_bio_certificate(enclave, data, data_len);
+    std::string str = tmp_file_to_str();
+    fprintf(stdout, "%s", str.c_str());
 }
 
 void decode_certificate_pem(FILE* file, const uint8_t* data, size_t data_len)
 {
-    X509* x509;
-    BIO* input = BIO_new_mem_buf(data, (int)data_len);
-    x509 = PEM_read_bio_X509(input, NULL, 0, NULL);
-    if (x509)
-        X509_print_ex_fp(
-            file,
-            x509,
-            XN_FLAG_COMPAT,
-            XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_DUMP_UNKNOWN_FIELDS);
-    BIO_free_all(input);
+    print_pem_certificate(enclave, data, data_len);
+    std::string str = tmp_file_to_str();
+    fprintf(file, "%s", str.c_str());
 }
 
 void decode_crl_pem(const uint8_t* data, size_t data_len)
 {
-    X509_CRL* x509;
-    BIO* input = BIO_new_mem_buf(data, (int)data_len);
-    x509 = PEM_read_bio_X509_CRL(input, NULL, NULL, NULL);
-    if (x509)
-        X509_CRL_print_fp(log_file, x509);
-    BIO_free_all(input);
+    print_pem_crl(enclave, data, data_len);
+    std::string str = tmp_file_to_str();
+    fprintf(log_file, "%s", str.c_str());
 }
 
 void parse_certificate_extension(const uint8_t* data, size_t data_len)
