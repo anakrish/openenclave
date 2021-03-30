@@ -30,16 +30,19 @@ static const uint64_t _SEC_TO_MSEC = 1000UL;
 static const uint64_t _MSEC_TO_USEC = 1000UL;
 static const uint64_t _MSEC_TO_NSEC = 1000000UL;
 
-OE_DEFINE_SYSCALL6(SYS_mmap)
+#define MAP_FAILED ((void*)-1)
+weak OE_DEFINE_SYSCALL6(SYS_mmap)
 {
     /* Always fail */
-    return EPERM;
+    errno = ENOSYS;
+    return MAP_FAILED;
 }
 
-OE_DEFINE_SYSCALL2(SYS_munmap)
+weak OE_DEFINE_SYSCALL2(SYS_munmap)
 {
     /* Always fail */
-    return EPERM;
+    errno = ENOSYS;
+    return -1;
 }
 
 weak OE_DEFINE_SYSCALL2(SYS_clock_gettime)

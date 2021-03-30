@@ -450,6 +450,8 @@ add_enclave_library(
   ${MUSLSRC}/misc/basename.c
   ${MUSLSRC}/misc/dirname.c
   ${MUSLSRC}/misc/getdomainname.c
+  ${MUSLSRC}/misc/getopt.c
+  ${MUSLSRC}/misc/getopt_long.c
   ${MUSLSRC}/misc/ioctl.c
   ${MUSLSRC}/misc/nftw.c
   ${MUSLSRC}/misc/uname.c

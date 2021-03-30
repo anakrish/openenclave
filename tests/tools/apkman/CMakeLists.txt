@@ -41,5 +41,8 @@ add_subdirectory(libs)
 # C++ library tests.
 add_subdirectory(cpp)
 
+# Machine Learning
+add_subdirectory(ml)
+
 # Language runtimes.
 add_subdirectory(runtimes)

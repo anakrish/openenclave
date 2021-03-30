@@ -32,6 +32,7 @@ tests/openssl/tests\..*$
 tests/tools/apkman/libs/gmp/enc/chudnovsky.c
 tests/tools/apkman/libs/hiredis/enc/example.c
 tests/tools/apkman/libs/zlib/enc/zpipe.c
+tests/tools/apkman/ml/.*
 tests/tools/apkman/runtimes/lua/scripts/.*
 tests/tools/apkman/runtimes/ocaml/enc/lexer.mll
 tests/tools/apkman/runtimes/ocaml/enc/parser.mly
