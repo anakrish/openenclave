@@ -4,3 +4,4 @@
 add_subdirectory(boost)
 add_subdirectory(cpp20)
 add_subdirectory(protobuf)
+add_subdirectory(thread_local)
