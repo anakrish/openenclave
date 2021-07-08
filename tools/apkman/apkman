@@ -166,6 +166,7 @@ alpine_exec()
         dist/proot -b /dev -b /dev/pts -b /proc -b /sys -b /dev/shm \
                    -b "$HOME" \
                    -b /home \
+                   -b /opt \
                    -r alpine-fs \
                    -0 \
                    -w "$CURRENT_DIR" \
@@ -174,6 +175,7 @@ alpine_exec()
     else
         ALPINE_EXEC_CMD="
             mount --bind /home \"$ALPINE_FS/home\"
+            mount --bind /opt \"$ALPINE_FS/opt\"
             mount -t proc /proc \"$ALPINE_FS/proc\"
             mount --rbind /dev \"$ALPINE_FS/dev\"
             mount --rbind  /sys \"$ALPINE_FS/sys\"
